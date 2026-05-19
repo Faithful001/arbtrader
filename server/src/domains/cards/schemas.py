@@ -1,4 +1,4 @@
-"""Cards domain — Pydantic schemas."""
+"""Cards domain - Pydantic schemas."""
 import uuid
 from datetime import datetime
 from typing import Optional

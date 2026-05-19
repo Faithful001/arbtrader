@@ -1,5 +1,5 @@
 """
-ArbTrader — FastAPI Application Entry Point
+ArbTrader - FastAPI Application Entry Point
 """
 import structlog
 from contextlib import asynccontextmanager
@@ -19,7 +19,7 @@ logger = structlog.get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan — startup and shutdown."""
+    """Application lifespan - startup and shutdown."""
     logger.info("ArbTrader starting up", env=settings.APP_ENV)
     # Tables are managed by Alembic; no auto-create in production
     yield

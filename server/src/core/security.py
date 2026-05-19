@@ -1,10 +1,11 @@
 """
-Security utilities — JWT creation/validation and password hashing.
+Security utilities - JWT creation/validation and password hashing.
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from jose import JWTError, jwt
+# pyrefly: ignore [missing-import]
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer

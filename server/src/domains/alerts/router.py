@@ -1,4 +1,4 @@
-"""Alerts domain — API router."""
+"""Alerts domain - API router."""
 import uuid
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException

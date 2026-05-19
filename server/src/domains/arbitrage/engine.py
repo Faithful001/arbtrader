@@ -1,5 +1,5 @@
 """
-Arbitrage Engine — core calculation logic.
+Arbitrage Engine - core calculation logic.
 
 For each card, compares normalized prices between buy/sell markets and
 calculates: gross spread, platform fees, shipping, net profit, ROI,

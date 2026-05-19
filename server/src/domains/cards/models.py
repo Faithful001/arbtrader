@@ -1,4 +1,4 @@
-"""Cards domain — ORM models."""
+"""Cards domain - ORM models."""
 import uuid
 from sqlalchemy import String, Integer, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID

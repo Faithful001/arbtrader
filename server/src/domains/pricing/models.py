@@ -1,4 +1,4 @@
-"""Pricing domain — ORM models for raw and normalized price records."""
+"""Pricing domain - ORM models for raw and normalized price records."""
 import uuid
 from datetime import datetime
 from sqlalchemy import String, Float, DateTime, ForeignKey, Text
@@ -24,7 +24,7 @@ class PriceRaw(Base, UUIDMixin, TimestampMixin):
 
 
 class PriceNormalized(Base, UUIDMixin, TimestampMixin):
-    """Normalized price snapshot — converted to GBP with standardized condition."""
+    """Normalized price snapshot - converted to GBP with standardized condition."""
     __tablename__ = "prices_normalized"
 
     price_raw_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("prices_raw.id"), nullable=False)

@@ -1,5 +1,5 @@
 """
-FX currency converter — converts prices to GBP using live rates.
+FX currency converter - converts prices to GBP using live rates.
 Falls back to hardcoded rates in mock mode.
 """
 from typing import Dict
@@ -47,7 +47,7 @@ class FXConverter:
                 resp.raise_for_status()
                 data = resp.json()
                 if data.get("success"):
-                    # Rates are quoted as X per 1 GBP — invert for to-GBP conversion
+                    # Rates are quoted as X per 1 GBP - invert for to-GBP conversion
                     raw = data.get("rates", {})
                     self._rates = {k: 1.0 / v for k, v in raw.items() if v > 0}
                     self._rates["GBP"] = 1.0

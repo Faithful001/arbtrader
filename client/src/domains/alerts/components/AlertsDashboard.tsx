@@ -1,132 +1,216 @@
-import { useState } from 'react'
-import { Bell, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import Spinner from "../../../shared/Spinner";
 
 const TRIGGER_LABELS: Record<string, string> = {
-  new_opportunity: 'New Opportunity',
-  price_drop: 'Price Drop',
-  undervalued: 'Undervalued Listing',
-  auction_ending: 'Auction Ending Soon',
-}
+  new_opportunity: "NEW OPP",
+  price_drop: "PX DROP",
+  undervalued: "UNDERVALUED",
+  auction_ending: "AUC ENDING",
+};
 
-function useMockAlerts() {
+import { alertsApi } from '../api/alerts.api'
+
+function useAlerts() {
   return useQuery({
-    queryKey: ['alerts'],
-    queryFn: async () => [
-      { id: '1', name: 'High Profit Alerts', trigger_type: 'new_opportunity',
-        conditions: { min_profit_gbp: 20, min_roi_percent: 15 },
-        delivery_channel: 'telegram', is_active: true },
-      { id: '2', name: 'Any Opportunity', trigger_type: 'new_opportunity',
-        conditions: { min_profit_gbp: 5 }, delivery_channel: 'telegram', is_active: false },
-      { id: '3', name: 'Charizard Price Drop', trigger_type: 'price_drop',
-        conditions: { drop_percent: 10 }, delivery_channel: 'telegram', is_active: true },
-    ],
-  })
+    queryKey: ["alerts"],
+    queryFn: alertsApi.getAlerts,
+  });
 }
 
 export default function AlertsDashboard() {
-  const { data: seedAlerts = [], isLoading } = useMockAlerts()
-  const [alerts, setAlerts] = useState<any[] | null>(null)
-  const [showCreate, setShowCreate] = useState(false)
-  const [newAlert, setNewAlert] = useState({ name: '', trigger_type: 'new_opportunity', min_profit: 10 })
+  const { data: alerts = [], isLoading, refetch } = useAlerts();
+  const [showCreate, setShowCreate] = useState(false);
+  const [newAlert, setNewAlert] = useState({
+    name: "",
+    trigger_type: "new_opportunity",
+    min_profit: 10,
+  });
 
-  const displayed = alerts ?? seedAlerts
-  const active = displayed.filter((a: any) => a.is_active).length
+  const displayed = alerts;
 
-  const toggle = (id: string) => setAlerts(displayed.map((a: any) => a.id === id ? { ...a, is_active: !a.is_active } : a))
-  const remove = (id: string) => setAlerts(displayed.filter((a: any) => a.id !== id))
-  const create = () => {
-    if (!newAlert.name.trim()) return
-    setAlerts([{ id: String(Date.now()), ...newAlert, conditions: { min_profit_gbp: newAlert.min_profit }, delivery_channel: 'telegram', is_active: true }, ...displayed])
-    setShowCreate(false)
-    setNewAlert({ name: '', trigger_type: 'new_opportunity', min_profit: 10 })
-  }
+  const toggle = async (id: string) => {
+    const alert = displayed.find((a: any) => a.id === id);
+    if (!alert) return;
+    try {
+      await alertsApi.updateAlert(id, { is_active: !alert.is_active });
+      refetch();
+    } catch (error) {
+      console.error("Failed to toggle alert", error);
+    }
+  };
+  
+  const remove = async (id: string) => {
+    try {
+      await alertsApi.deleteAlert(id);
+      refetch();
+    } catch (error) {
+      console.error("Failed to remove alert", error);
+    }
+  };
+  
+  const create = async () => {
+    if (!newAlert.name.trim()) return;
+    try {
+      await alertsApi.createAlert({
+        name: newAlert.name,
+        trigger_type: newAlert.trigger_type,
+        conditions: { min_profit_gbp: newAlert.min_profit },
+        delivery_channel: "telegram",
+      });
+      setShowCreate(false);
+      setNewAlert({ name: "", trigger_type: "new_opportunity", min_profit: 10 });
+      refetch();
+    } catch (error) {
+      console.error("Failed to create alert", error);
+    }
+  };
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="main-view">
+      <div className="view-header">
         <div>
-          <h1 className="page-title">Alerts Dashboard</h1>
-          <p className="page-subtitle">Telegram notification rules for arbitrage events</p>
+          <h1 className="view-title">CONDITION TRIGGERS</h1>
+          <p className="view-primary-metric">Execution Rules</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreate(v => !v)}>
-          <Plus size={14} /> New Alert
-        </button>
+        <div className="control-bar" style={{ marginBottom: 0 }}>
+          <button className="btn-dense btn-action" onClick={() => setShowCreate((v) => !v)}>
+            {showCreate ? "CANCEL ADD" : "ADD TRIGGER RULE"}
+          </button>
+        </div>
       </div>
 
-      <div className="stat-grid">
-        <div className="stat-card"><div className="stat-label">Active Rules</div><div className="stat-value stat-positive">{active}</div></div>
-        <div className="stat-card"><div className="stat-label">Total Rules</div><div className="stat-value stat-accent">{displayed.length}</div></div>
-        <div className="stat-card"><div className="stat-label">Channel</div><div className="stat-value" style={{ fontSize: 18 }}>Telegram</div><div className="stat-sub">primary delivery</div></div>
+      <div className="content-pad">
+        {showCreate && (
+          <div
+            className="panel"
+            style={{ marginBottom: 24, borderLeft: "2px solid var(--text-main)" }}
+          >
+            <div className="view-title" style={{ marginBottom: 16 }}>
+              NEW TRIGGER RULE PARAMETERS
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto auto auto 1fr",
+                gap: 16,
+                alignItems: "flex-end",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+                  RULE IDENTIFIER
+                </div>
+                <input
+                  className="input-dense"
+                  style={{ width: 200 }}
+                  placeholder="E.G. CHARIZARD SWING"
+                  value={newAlert.name}
+                  onChange={(e) =>
+                    setNewAlert((p) => ({ ...p, name: e.target.value.toUpperCase() }))
+                  }
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+                  EVENT CONDITION
+                </div>
+                <select
+                  className="input-dense"
+                  style={{ width: 160 }}
+                  value={newAlert.trigger_type}
+                  onChange={(e) => setNewAlert((p) => ({ ...p, trigger_type: e.target.value }))}
+                >
+                  {Object.entries(TRIGGER_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+                  THRESHOLD (GBP)
+                </div>
+                <input
+                  className="input-dense"
+                  style={{ width: 100 }}
+                  type="number"
+                  min={0}
+                  value={newAlert.min_profit}
+                  onChange={(e) =>
+                    setNewAlert((p) => ({ ...p, min_profit: Number(e.target.value) }))
+                  }
+                />
+              </div>
+              <div>
+                <button className="btn-dense btn-action" onClick={create}>
+                  DEPLOY RULE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isLoading ? (
+          <Spinner label="LOADING TRIGGERS..." />
+        ) : displayed.length === 0 ? (
+          <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+            [NO ACTIVE TRIGGERS CONFIGURED]
+          </div>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>STATUS</th>
+                <th>IDENTIFIER</th>
+                <th>EVENT TYPE</th>
+                <th className="right">PARAMETERS</th>
+                <th>ROUTE</th>
+                <th className="right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayed.map((a: any) => (
+                <tr key={a.id} style={{ opacity: a.is_active ? 1 : 0.5 }}>
+                  <td
+                    className="mono"
+                    style={{ color: a.is_active ? "var(--profit)" : "var(--text-muted)" }}
+                  >
+                    {a.is_active ? "RUNNING" : "HALTED"}
+                  </td>
+                  <td style={{ fontWeight: 500 }}>{a.name.toUpperCase()}</td>
+                  <td className="mono">
+                    {TRIGGER_LABELS[a.trigger_type] ?? a.trigger_type.toUpperCase()}
+                  </td>
+                  <td className="right mono">
+                    {a.conditions?.min_profit_gbp != null
+                      ? `MIN SPREAD >= £${a.conditions.min_profit_gbp}`
+                      : "-"}
+                  </td>
+                  <td className="mono">TELEGRAM</td>
+                  <td className="right">
+                    <button
+                      className="btn-dense"
+                      onClick={() => toggle(a.id)}
+                      style={{ marginRight: 8 }}
+                    >
+                      {a.is_active ? "HALT" : "START"}
+                    </button>
+                    <button
+                      className="btn-dense"
+                      onClick={() => remove(a.id)}
+                      style={{ color: "var(--loss)" }}
+                    >
+                      DEL
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
-
-      {showCreate && (
-        <div className="card" style={{ marginBottom: 20, borderColor: 'var(--accent)' }}>
-          <div className="card-title" style={{ marginBottom: 16 }}>Create Alert Rule</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <div className="input-group">
-              <label className="input-label">Rule Name</label>
-              <input className="input" placeholder="e.g. High Profit Alert" value={newAlert.name}
-                onChange={e => setNewAlert(p => ({ ...p, name: e.target.value }))} />
-            </div>
-            <div className="input-group">
-              <label className="input-label">Trigger</label>
-              <select className="input" value={newAlert.trigger_type}
-                onChange={e => setNewAlert(p => ({ ...p, trigger_type: e.target.value }))}>
-                {Object.entries(TRIGGER_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-            </div>
-            <div className="input-group">
-              <label className="input-label">Min Profit (£)</label>
-              <input className="input" type="number" min={0} value={newAlert.min_profit}
-                onChange={e => setNewAlert(p => ({ ...p, min_profit: Number(e.target.value) }))} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-            <button className="btn btn-primary" onClick={create}>Create Rule</button>
-            <button className="btn btn-ghost" onClick={() => setShowCreate(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="loading-state"><div className="spinner" /></div>
-      ) : displayed.length === 0 ? (
-        <div className="empty-state">
-          <Bell size={32} style={{ color: 'var(--text-muted)' }} />
-          <div className="empty-state-title">No alert rules yet</div>
-          <div className="empty-state-sub">Create your first rule to get Telegram notifications</div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {displayed.map((a: any) => (
-            <div key={a.id} className="alert-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 8, background: a.is_active ? 'var(--accent-glow)' : 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Bell size={15} style={{ color: a.is_active ? 'var(--accent)' : 'var(--text-muted)' }} />
-                </div>
-                <div>
-                  <div className="alert-card-name">{a.name}</div>
-                  <div className="alert-card-meta">
-                    {TRIGGER_LABELS[a.trigger_type] ?? a.trigger_type}
-                    {a.conditions?.min_profit_gbp != null && ` · Min £${a.conditions.min_profit_gbp}`}
-                    {' · Telegram'}
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className={`badge ${a.is_active ? 'badge-green' : 'badge-muted'}`}>{a.is_active ? 'Active' : 'Paused'}</span>
-                <button className="btn btn-ghost btn-sm btn-icon" onClick={() => toggle(a.id)}>
-                  {a.is_active ? <ToggleRight size={18} style={{ color: 'var(--green)' }} /> : <ToggleLeft size={18} />}
-                </button>
-                <button className="btn btn-danger btn-sm btn-icon" onClick={() => remove(a.id)}>
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
-  )
+  );
 }

@@ -1,9 +1,12 @@
 """
-Core configuration — loaded from environment variables via Pydantic Settings.
+Core configuration - loaded from environment variables via Pydantic Settings.
 """
 from functools import lru_cache
-from typing import List
+from typing import List, Union
+import os
 
+from pydantic import field_validator
+# pyrefly: ignore [missing-import]
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,40 +22,51 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     APP_SECRET_KEY: str = "dev-secret-key-change-in-production"
     APP_DEBUG: bool = True
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, list):
+            return v
+        return v
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/arbtrader"
+    DATABASE_URL: str = os.getenv("DATABASE_URL")
 
     # Redis
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = os.getenv("REDIS_URL")
 
     # eBay
-    EBAY_APP_ID: str = "mock-app-id"
-    EBAY_DEV_ID: str = "mock-dev-id"
-    EBAY_CERT_ID: str = "mock-cert-id"
-    EBAY_CLIENT_ID: str = "mock-client-id"
-    EBAY_CLIENT_SECRET: str = "mock-client-secret"
+    EBAY_APP_ID: str = os.getenv("EBAY_APP_ID")
+    EBAY_DEV_ID: str = os.getenv("EBAY_DEV_ID")
+    EBAY_CERT_ID: str = os.getenv("EBAY_CERT_ID")
+    EBAY_CLIENT_ID: str = os.getenv("EBAY_CLIENT_ID")
+    EBAY_CLIENT_SECRET: str = os.getenv("EBAY_CLIENT_SECRET")
 
     # Telegram
-    TELEGRAM_BOT_TOKEN: str = "mock-telegram-token"
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN")
 
     # FX
-    FX_API_KEY: str = "mock-fx-key"
-    FX_BASE_CURRENCY: str = "GBP"
+    FX_API_KEY: str = os.getenv("FX_API_KEY")
+    FX_BASE_CURRENCY: str = os.getenv("FX_BASE_CURRENCY")
 
     # Arbitrage engine
-    ARBITRAGE_MIN_NET_PROFIT_GBP: float = 5.0
-    ARBITRAGE_MIN_CONFIDENCE_SCORE: float = 0.6
-    ARBITRAGE_RECALC_INTERVAL_MINUTES: int = 60
-    PRICE_INGESTION_INTERVAL_MINUTES: int = 120
+    ARBITRAGE_MIN_NET_PROFIT_GBP: float = os.getenv("ARBITRAGE_MIN_NET_PROFIT_GBP")
+    ARBITRAGE_MIN_CONFIDENCE_SCORE: float = os.getenv("ARBITRAGE_MIN_CONFIDENCE_SCORE")
+    ARBITRAGE_RECALC_INTERVAL_MINUTES: int = os.getenv("ARBITRAGE_RECALC_INTERVAL_MINUTES")
+    PRICE_INGESTION_INTERVAL_MINUTES: int = os.getenv("PRICE_INGESTION_INTERVAL_MINUTES")
+    PRICING_DATA_RETENTION_DAYS: int = 90
+
 
     # JWT
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 10080  # 7 days
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM")
+    JWT_EXPIRE_MINUTES: int = os.getenv("JWT_EXPIRE_MINUTES")  # 7 days
 
     # Mock Mode
-    USE_MOCK_DATA: bool = True
+    USE_MOCK_DATA: bool = False
 
 
 @lru_cache

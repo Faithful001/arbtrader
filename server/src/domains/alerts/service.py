@@ -1,4 +1,4 @@
-"""Alerts domain — service layer."""
+"""Alerts domain - service layer."""
 import uuid
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession

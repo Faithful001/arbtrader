@@ -1,4 +1,4 @@
-"""Markets domain — ORM models."""
+"""Markets domain - ORM models."""
 from sqlalchemy import String, Float, Boolean, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from src.infrastructure.database.base import Base, UUIDMixin, TimestampMixin

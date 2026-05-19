@@ -1,4 +1,4 @@
-"""Markets domain — service layer."""
+"""Markets domain - service layer."""
 import uuid
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession

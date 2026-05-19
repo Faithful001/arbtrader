@@ -1,4 +1,4 @@
-"""Users domain — ORM models."""
+"""Users domain - ORM models."""
 import uuid
 from sqlalchemy import String, Boolean, JSON
 from sqlalchemy.dialects.postgresql import UUID
@@ -10,7 +10,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "users"
 
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     telegram_chat_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

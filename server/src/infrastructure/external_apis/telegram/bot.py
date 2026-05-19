@@ -1,5 +1,5 @@
 """
-Telegram Bot sender — dispatches alert messages to user Telegram chats.
+Telegram Bot sender - dispatches alert messages to user Telegram chats.
 No-ops in mock mode with a log message.
 """
 import structlog

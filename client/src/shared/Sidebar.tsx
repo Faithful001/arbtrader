@@ -1,58 +1,63 @@
-import { NavLink } from 'react-router-dom'
-import {
-  TrendingUp, LayoutGrid, Store, Bell, Briefcase, Settings, Zap
-} from 'lucide-react'
+import { NavLink } from "react-router-dom";
+import { TrendingUp, LayoutGrid, Store, Bell, Briefcase, Settings, Zap } from "lucide-react";
 
 const navItems = [
-  { to: '/',          label: 'Opportunity Feed', icon: TrendingUp },
-  { to: '/markets',   label: 'Listings',          icon: Store },
-  { to: '/alerts',    label: 'Alerts',            icon: Bell },
-  { to: '/portfolio', label: 'Portfolio / PnL',   icon: Briefcase },
-]
+  { to: "/", label: "Live Spreads" },
+  { to: "/markets", label: "Listings" },
+  { to: "/alerts", label: "Condition Triggers" },
+  { to: "/portfolio", label: "Position Book" },
+];
 
 export default function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">
-          <Zap size={14} />
-        </div>
-        <span className="sidebar-logo-text">ArbTrader</span>
+      <div
+        style={{
+          padding: "0 20px 20px",
+          color: "var(--text-bright)",
+          fontWeight: 700,
+          letterSpacing: "0.05em",
+        }}
+      >
+        ARBTRADER<span className="text-profit">.SYS</span>
       </div>
 
       {/* Nav */}
       <nav className="sidebar-nav">
-        <div className="nav-section-label">Intelligence</div>
-        {navItems.map(({ to, label, icon: Icon }) => (
+        <div className="nav-section-label">MARKET DATA</div>
+        {navItems.map(({ to, label }) => (
           <NavLink
             key={to}
             to={to}
-            end={to === '/'}
-            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            end={to === "/"}
+            className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
           >
-            <Icon size={16} className="nav-item-icon" />
             {label}
           </NavLink>
         ))}
 
-        <div className="nav-section-label" style={{ marginTop: 16 }}>System</div>
-        <div className="nav-item" style={{ cursor: 'default' }}>
-          <Settings size={16} className="nav-item-icon" />
-          Settings
+        <div className="nav-section-label" style={{ marginTop: 24 }}>
+          SYSTEM
+        </div>
+        <div className="nav-item" style={{ cursor: "pointer" }}>
+          Config & Routing
         </div>
       </nav>
 
       {/* Footer */}
-      <div className="sidebar-footer">
-        <div className="live-badge">
-          <span className="live-dot" />
-          Mock Mode Active
-        </div>
-        <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-          v1.0.0 — MVP
-        </div>
+      <div
+        style={{
+          marginTop: "auto",
+          padding: "20px",
+          borderTop: "1px solid var(--border-dim)",
+          fontSize: 11,
+          fontFamily: "var(--font-mono)",
+        }}
+      >
+        <div style={{ color: "var(--profit)", marginBottom: 4 }}>● LIVE_ENV</div>
+        <div style={{ color: "var(--text-muted)" }}>v1.0.0-rc.1</div>
       </div>
     </aside>
-  )
+  );
 }

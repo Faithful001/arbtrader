@@ -1,4 +1,4 @@
-"""Alerts domain — Celery tasks (event-driven alert dispatch)."""
+"""Alerts domain - Celery tasks (event-driven alert dispatch)."""
 import structlog
 from src.infrastructure.celery.app import app
 

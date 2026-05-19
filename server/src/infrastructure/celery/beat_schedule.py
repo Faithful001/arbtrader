@@ -1,5 +1,5 @@
 """
-Celery Beat schedule — defines periodic task intervals.
+Celery Beat schedule - defines periodic task intervals.
 All intervals are configurable via settings.
 """
 from celery.schedules import crontab
@@ -37,5 +37,11 @@ BEAT_SCHEDULE = {
         "task": "src.domains.portfolio.tasks.update_all_portfolio_valuations",
         "schedule": crontab(minute=0, hour="*/6"),
         "options": {"queue": "portfolio"},
+    },
+    # Database cleanup: every day at midnight
+    "cleanup-stale-pricing-data": {
+        "task": "src.domains.pricing.tasks.cleanup_stale_pricing_data",
+        "schedule": crontab(minute=0, hour=0),
+        "options": {"queue": "ingestion"},
     },
 }

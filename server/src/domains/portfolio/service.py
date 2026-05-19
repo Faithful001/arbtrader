@@ -1,4 +1,4 @@
-"""Portfolio domain — service layer."""
+"""Portfolio domain - service layer."""
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple

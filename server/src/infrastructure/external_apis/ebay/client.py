@@ -1,5 +1,5 @@
 """
-eBay Finding API client — fetches completed/sold listings for UK and US markets.
+eBay Finding API client - fetches completed/sold listings for UK and US markets.
 Supports mock mode when USE_MOCK_DATA=true.
 """
 import uuid

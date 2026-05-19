@@ -1,4 +1,4 @@
-"""Alembic environment — async SQLAlchemy setup."""
+"""Alembic environment - async SQLAlchemy setup."""
 import asyncio
 from logging.config import fileConfig
 from sqlalchemy import pool

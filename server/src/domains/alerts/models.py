@@ -1,4 +1,4 @@
-"""Alerts domain — ORM models."""
+"""Alerts domain - ORM models."""
 import uuid
 from sqlalchemy import String, Boolean, JSON, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID

@@ -1,4 +1,4 @@
-"""Initial schema — all 10 tables with UUIDs and indexes."""
+"""Initial schema - all 10 tables with UUIDs and indexes."""
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID, JSONB

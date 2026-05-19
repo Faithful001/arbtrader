@@ -1,4 +1,4 @@
-"""Users domain — Pydantic schemas."""
+"""Users domain - Pydantic schemas."""
 import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any
@@ -13,16 +13,16 @@ class UserPreferences(BaseModel):
     currency_display: str = "GBP"
 
 
+class OTPRequest(BaseModel):
+    email: EmailStr
+
+class OTPVerify(BaseModel):
+    email: EmailStr
+    otp: str
+
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
-
-    @field_validator("password")
-    @classmethod
-    def password_strength(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        return v
+    password: Optional[str] = None
 
 
 class UserUpdate(BaseModel):

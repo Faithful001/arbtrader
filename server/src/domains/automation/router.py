@@ -1,4 +1,4 @@
-"""Automation domain — API router (MVP: read + create only, no execution)."""
+"""Automation domain - API router (MVP: read + create only, no execution)."""
 import uuid
 from typing import List, Any, Dict
 from fastapi import APIRouter, Depends

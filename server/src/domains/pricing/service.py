@@ -1,11 +1,11 @@
-"""Pricing domain — service and ingestion logic."""
+"""Pricing domain - service and ingestion logic."""
 import uuid
 from datetime import datetime, timezone
 from typing import List
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, delete
 
 from src.domains.pricing.models import PriceRaw, PriceNormalized
 from src.domains.cards.models import Card
@@ -100,5 +100,63 @@ class PricingService:
         )
         return list(result.scalars().all())
 
+
+    async def get_recent_listings(self, db: AsyncSession, limit: int = 50) -> list[dict]:
+        stmt = (
+            select(
+                PriceRaw,
+                PriceNormalized,
+                Card,
+                Market
+            )
+            .join(PriceNormalized, PriceNormalized.price_raw_id == PriceRaw.id)
+            .join(Card, Card.id == PriceRaw.card_id)
+            .join(Market, Market.id == PriceRaw.market_id)
+            .order_by(desc(PriceRaw.fetched_at))
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        rows = result.all()
+        
+        listings = []
+        for raw, norm, card, market in rows:
+            listings.append({
+                "id": str(raw.id),
+                "card_name": card.name,
+                "card_image_url": card.image_url,
+                "rarity": card.rarity,
+                "market": market.name,
+                "region": market.region,
+                "condition": norm.condition_normalized,
+                "price_gbp": norm.price_gbp,
+                "listing_type": "Sale",
+                "ends_in": None,
+                "url": raw.url,
+                "sold_count": 0,
+            })
+        return listings
+
+    async def cleanup_stale_data(self, db: AsyncSession, days_to_keep: int) -> int:
+        from datetime import timedelta
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_to_keep)
+        
+        # We need to find old raw prices first
+        stmt = select(PriceRaw.id).where(PriceRaw.fetched_at < cutoff_date)
+        result = await db.execute(stmt)
+        old_raw_ids = result.scalars().all()
+        
+        if not old_raw_ids:
+            return 0
+            
+        # Delete dependent normalized prices first
+        await db.execute(
+            delete(PriceNormalized).where(PriceNormalized.price_raw_id.in_(old_raw_ids))
+        )
+        
+        # Then delete raw prices
+        delete_raw_stmt = delete(PriceRaw).where(PriceRaw.id.in_(old_raw_ids))
+        result = await db.execute(delete_raw_stmt)
+        
+        return len(old_raw_ids)
 
 pricing_service = PricingService()

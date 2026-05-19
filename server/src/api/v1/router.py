@@ -1,4 +1,4 @@
-"""API v1 — aggregated router mounting all domain routers."""
+"""API v1 - aggregated router mounting all domain routers."""
 from fastapi import APIRouter
 
 from src.domains.users.router import router as users_router

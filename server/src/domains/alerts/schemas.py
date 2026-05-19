@@ -1,4 +1,4 @@
-"""Alerts domain — Pydantic schemas."""
+"""Alerts domain - Pydantic schemas."""
 import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any, List

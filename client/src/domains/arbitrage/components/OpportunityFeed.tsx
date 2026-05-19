@@ -1,134 +1,118 @@
 import { useState } from "react";
-import { RefreshCw, TrendingUp, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useOpportunities, useRecalculate } from "../hooks/useOpportunities";
+import Spinner from "../../../shared/Spinner";
 import type { Opportunity } from "../types";
-import OpportunityCard from "./OpportunityCard";
-
-const SORT_OPTIONS = [
-  { value: "net_profit_gbp", label: "Net Profit" },
-  { value: "roi_percent", label: "ROI %" },
-  { value: "confidence_score", label: "Confidence" },
-];
 
 export default function OpportunityFeed() {
-  const [sortBy, setSortBy] = useState("net_profit_gbp");
   const [minProfit, setMinProfit] = useState(5);
 
   const { data, isLoading, isError } = useOpportunities({
-    sort_by: sortBy,
+    sort_by: "net_profit_gbp",
     min_profit: minProfit,
     limit: 50,
   });
   const recalc = useRecalculate();
 
   const items: Opportunity[] = data?.items ?? [];
-  const totalProfit = items.reduce((s, o) => s + o.net_profit_gbp, 0);
-  const avgConfidence = items.length
-    ? (items.reduce((s, o) => s + o.confidence_score, 0) / items.length) * 100
-    : 0;
-  const avgRoi = items.length ? items.reduce((s, o) => s + o.roi_percent, 0) / items.length : 0;
 
   return (
-    <div>
+    <div className="main-view">
       {/* Header */}
-      <div className="page-header">
+      <div className="view-header">
         <div>
-          <h1 className="page-title">Opportunity Feed</h1>
-          <p className="page-subtitle">Live arbitrage opportunities — eBay UK vs eBay US</p>
+          <h1 className="view-title">Cross-Market Spreads</h1>
+          <p className="view-primary-metric">Live Feed</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => recalc.mutate()}
-          disabled={recalc.isPending}
-        >
-          <RefreshCw size={14} className={recalc.isPending ? "spin" : ""} />
-          {recalc.isPending ? "Refreshing…" : "Refresh"}
-        </button>
-      </div>
-
-      {/* Summary stats */}
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-label">Opportunities</div>
-          <div className="stat-value stat-accent">{items.length}</div>
-          <div className="stat-sub">above £{minProfit} profit</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Total Feed Profit</div>
-          <div className="stat-value stat-positive">£{totalProfit.toFixed(0)}</div>
-          <div className="stat-sub">combined net</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Avg ROI</div>
-          <div className="stat-value stat-cyan">{avgRoi.toFixed(1)}%</div>
-          <div className="stat-sub">across feed</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Avg Confidence</div>
-          <div className="stat-value">{avgConfidence.toFixed(0)}%</div>
-          <div className="stat-sub">data quality</div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center" }}>
-        <div style={{ display: "flex", gap: 4 }}>
-          {SORT_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              className={`btn btn-sm ${sortBy === opt.value ? "btn-primary" : "btn-ghost"}`}
-              onClick={() => setSortBy(opt.value)}
+        <div className="control-bar" style={{ marginBottom: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase" }}>
+              Min Spread
+            </span>
+            <select
+              className="input-dense"
+              value={minProfit}
+              onChange={(e) => setMinProfit(Number(e.target.value))}
             >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Min profit</span>
-          <select
-            className="input"
-            style={{ width: 90, padding: "6px 10px" }}
-            value={minProfit}
-            onChange={(e) => setMinProfit(Number(e.target.value))}
+              {[5, 10, 15, 20, 30, 50].map((v) => (
+                <option key={v} value={v}>
+                  £{v}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            className="btn-dense btn-action"
+            onClick={() => recalc.mutate()}
+            disabled={recalc.isPending}
           >
-            {[5, 10, 15, 20, 30, 50].map((v) => (
-              <option key={v} value={v}>
-                £{v}
-              </option>
-            ))}
-          </select>
+            {recalc.isPending ? "SYNCING..." : "SYNC"}
+          </button>
         </div>
       </div>
 
-      {/* Feed */}
-      {isLoading ? (
-        <div className="loading-state">
-          <div className="spinner" />
-          <span>Fetching opportunities…</span>
-        </div>
-      ) : isError ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">⚠️</div>
-          <div className="empty-state-title">Failed to load feed</div>
-          <div className="empty-state-sub">Check the server connection</div>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">📊</div>
-          <div className="empty-state-title">No opportunities found</div>
-          <div className="empty-state-sub">
-            Try lowering the minimum profit threshold or click Refresh
+      <div className="content-pad">
+        {/* Feed Table */}
+        {isLoading ? (
+          <Spinner label="FETCHING MARKET DATA..." />
+        ) : isError ? (
+          <div style={{ color: "var(--loss)", fontFamily: "var(--font-mono)" }}>
+            [ERR: CONNECTION FAILED]
           </div>
-        </div>
-      ) : (
-        <div className="feed-list">
-          {items.map((opp, i) => (
-            <div key={opp.id} style={{ animationDelay: `${i * 30}ms` }} className="fade-in">
-              <OpportunityCard opportunity={opp} />
-            </div>
-          ))}
-        </div>
-      )}
+        ) : items.length === 0 ? (
+          <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+            [NO SPREADS DETECTED ABOVE THRESHOLD]
+          </div>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>ASSET / SET</th>
+                <th>RARITY</th>
+                <th className="right">US ASK (EST)</th>
+                <th className="right">UK BID (EST)</th>
+                <th className="right">CONF. SCORE</th>
+                <th className="right">NET SPREAD</th>
+                <th className="right">ROI</th>
+                <th className="right">ACTION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((opp) => (
+                <tr key={opp.id}>
+                  <td>
+                    <div style={{ fontWeight: 500 }}>{opp.card_name}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                      {opp.card_id.slice(0, 8)}...
+                    </div>
+                  </td>
+                  <td style={{ color: "var(--text-muted)", fontSize: 12 }}>-</td>
+                  <td className="right numeric text-muted">£{opp.buy_price_gbp.toFixed(2)}</td>
+                  <td className="right numeric text-muted">£{opp.sell_price_gbp.toFixed(2)}</td>
+                  <td className="right numeric">
+                    <span
+                      style={{
+                        color: opp.confidence_score > 0.8 ? "var(--profit)" : "var(--warn)",
+                      }}
+                    >
+                      {(opp.confidence_score * 100).toFixed(0)}%
+                    </span>
+                  </td>
+                  <td className="right numeric text-profit text-bright">
+                    +£{opp.net_profit_gbp.toFixed(2)}
+                  </td>
+                  <td className="right numeric text-profit">{opp.roi_percent.toFixed(1)}%</td>
+                  <td className="right">
+                    <Link to={`/cards/${opp.card_id}`} className="btn-dense">
+                      ANALYZE
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

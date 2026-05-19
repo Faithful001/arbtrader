@@ -1,5 +1,5 @@
 """
-SQLAlchemy Base — shared declarative base and UUID mixin for all ORM models.
+SQLAlchemy Base - shared declarative base and UUID mixin for all ORM models.
 """
 import uuid
 from datetime import datetime, timezone

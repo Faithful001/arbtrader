@@ -1,4 +1,4 @@
-"""Portfolio domain — API router."""
+"""Portfolio domain - API router."""
 import uuid
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException

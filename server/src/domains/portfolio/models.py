@@ -1,4 +1,4 @@
-"""Portfolio domain — ORM models."""
+"""Portfolio domain - ORM models."""
 import uuid
 from datetime import datetime
 from sqlalchemy import String, Float, DateTime, ForeignKey, Integer, Text

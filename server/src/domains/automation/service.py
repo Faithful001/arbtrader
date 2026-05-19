@@ -1,4 +1,4 @@
-"""Automation domain — service (MVP stubs, execution disabled)."""
+"""Automation domain - service (MVP stubs, execution disabled)."""
 import uuid
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +20,7 @@ class AutomationService:
             rule_type=data["rule_type"],
             conditions=data.get("conditions", {}),
             actions=data.get("actions", {}),
-            is_active=False,  # LOCKED — no execution in MVP
+            is_active=False,  # LOCKED - no execution in MVP
             description=data.get("description"),
         )
         db.add(rule)

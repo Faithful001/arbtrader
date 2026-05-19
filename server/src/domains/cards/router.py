@@ -1,4 +1,4 @@
-"""Cards domain — API router."""
+"""Cards domain - API router."""
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query

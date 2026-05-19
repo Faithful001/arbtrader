@@ -1,4 +1,4 @@
-"""Arbitrage domain — service layer."""
+"""Arbitrage domain - service layer."""
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional

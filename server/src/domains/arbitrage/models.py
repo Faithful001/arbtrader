@@ -1,4 +1,4 @@
-"""Arbitrage domain — ORM models for opportunities."""
+"""Arbitrage domain - ORM models for opportunities."""
 import uuid
 from datetime import datetime
 from sqlalchemy import String, Float, DateTime, ForeignKey

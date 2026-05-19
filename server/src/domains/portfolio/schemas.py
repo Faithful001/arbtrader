@@ -1,4 +1,4 @@
-"""Portfolio domain — Pydantic schemas."""
+"""Portfolio domain - Pydantic schemas."""
 import uuid
 from datetime import datetime
 from typing import Optional, List

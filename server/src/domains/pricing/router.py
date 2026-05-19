@@ -1,4 +1,4 @@
-"""Pricing domain — API router."""
+"""Pricing domain - API router."""
 import uuid
 from typing import List
 from fastapi import APIRouter, Depends, Query
@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.infrastructure.database.session import get_db
 from src.domains.pricing.service import pricing_service
-from src.domains.pricing.schemas import PriceNormalizedResponse
+from src.domains.pricing.schemas import PriceNormalizedResponse, ListingResponse
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
 
@@ -19,6 +19,11 @@ async def get_price_history(
     db: AsyncSession = Depends(get_db),
 ):
     return await pricing_service.get_price_history(db, card_id, market_id, limit)
+
+
+@router.get("/listings", response_model=List[ListingResponse])
+async def get_recent_listings(limit: int = Query(50, ge=1, le=200), db: AsyncSession = Depends(get_db)):
+    return await pricing_service.get_recent_listings(db, limit)
 
 
 @router.post("/ingest/{region}", tags=["dev"])

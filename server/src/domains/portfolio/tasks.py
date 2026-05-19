@@ -1,4 +1,4 @@
-"""Portfolio domain — Celery tasks."""
+"""Portfolio domain - Celery tasks."""
 import structlog
 from src.infrastructure.celery.app import app
 

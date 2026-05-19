@@ -1,4 +1,4 @@
-# ArbTrader — Arbitrage Card Trading Platform
+# ArbTrader - Arbitrage Card Trading Platform
 
 A production-ready arbitrage intelligence platform for trading cards (Pokémon first).
 Identifies **buy-low / sell-high** opportunities across eBay UK and eBay US, calculates true net profit, and surfaces high-confidence opportunities with Telegram alerts.
@@ -21,6 +21,7 @@ Identifies **buy-low / sell-high** opportunities across eBay UK and eBay US, cal
 ## Quick Start
 
 ### Prerequisites
+
 - Docker & Docker Compose
 - Node 20+
 - Python 3.11+
@@ -53,6 +54,7 @@ Services:
 ### 3. Run Locally (Development)
 
 **Backend:**
+
 ```bash
 cd server
 python -m venv venv
@@ -63,18 +65,21 @@ uvicorn main:app --reload --port 8000
 ```
 
 **Celery Worker:**
+
 ```bash
 cd server
 celery -A src.infrastructure.celery.app worker --loglevel=info
 ```
 
 **Celery Beat (Scheduler):**
+
 ```bash
 cd server
 celery -A src.infrastructure.celery.app beat --loglevel=info
 ```
 
 **Frontend:**
+
 ```bash
 cd client
 npm install
@@ -85,7 +90,7 @@ npm run dev
 
 ## Architecture
 
-- **DDD (Domain-Driven Design)** — 8 domains: cards, markets, pricing, arbitrage, alerts, portfolio, users, automation
+- **DDD (Domain-Driven Design)** - 8 domains: cards, markets, pricing, arbitrage, alerts, portfolio, users, automation
 - **FastAPI** async API with SQLAlchemy 2.0 ORM
 - **Celery + Redis** for background price ingestion, arbitrage recalculation, and alert dispatch
 - **Alembic** for database migrations
@@ -95,4 +100,5 @@ npm run dev
 ---
 
 ## North Star Metric
+
 > **Profit generated per user per week (£)**
