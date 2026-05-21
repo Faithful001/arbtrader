@@ -1,8 +1,5 @@
-"""
-Core configuration - loaded from environment variables via Pydantic Settings.
-"""
 from functools import lru_cache
-from typing import List, Union
+from typing import List, Union, Optional
 import os
 
 from pydantic import field_validator
@@ -40,11 +37,11 @@ class Settings(BaseSettings):
     REDIS_URL: str = os.getenv("REDIS_URL")
 
     # eBay
-    EBAY_APP_ID: str = os.getenv("EBAY_APP_ID")
-    EBAY_DEV_ID: str = os.getenv("EBAY_DEV_ID")
-    EBAY_CERT_ID: str = os.getenv("EBAY_CERT_ID")
-    EBAY_CLIENT_ID: str = os.getenv("EBAY_CLIENT_ID")
-    EBAY_CLIENT_SECRET: str = os.getenv("EBAY_CLIENT_SECRET")
+    EBAY_APP_ID: Optional[str] = os.getenv("EBAY_APP_ID")
+    EBAY_DEV_ID: Optional[str] = os.getenv("EBAY_DEV_ID")
+    EBAY_CERT_ID: Optional[str] = os.getenv("EBAY_CERT_ID")
+    EBAY_CLIENT_ID: Optional[str] = os.getenv("EBAY_CLIENT_ID")
+    EBAY_CLIENT_SECRET: Optional[str] = os.getenv("EBAY_CLIENT_SECRET")
 
     # Telegram
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN")
