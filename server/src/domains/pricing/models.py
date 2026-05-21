@@ -21,6 +21,7 @@ class PriceRaw(Base, UUIDMixin, TimestampMixin):
     external_id: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    listing_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
 
 class PriceNormalized(Base, UUIDMixin, TimestampMixin):

@@ -28,5 +28,5 @@ app.conf.update(
 )
 
 # Import beat schedule after app is configured
-from src.infrastructure.celery.beat_schedule import BEAT_SCHEDULE  # noqa: E402
+from src.infrastructure.celery.beat_schedule import BEAT_SCHEDULE
 app.conf.beat_schedule = BEAT_SCHEDULE

@@ -62,6 +62,11 @@ class TransactionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PnLHistoryPoint(BaseModel):
+    date: str
+    value: float
+
+
 class PnLSummary(BaseModel):
     total_invested_gbp: float
     current_value_gbp: float
@@ -70,3 +75,4 @@ class PnLSummary(BaseModel):
     total_pnl_gbp: float
     roi_percent: float
     holdings_count: int
+    history: List[PnLHistoryPoint] = []

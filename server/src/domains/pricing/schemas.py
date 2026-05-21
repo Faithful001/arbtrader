@@ -24,7 +24,7 @@ class ListingResponse(BaseModel):
     region: str
     condition: str
     price_gbp: float
-    listing_type: str = "Sale"
+    listing_type: str | None = None
     ends_in: str | None = None
     url: str | None = None
     sold_count: int = 0

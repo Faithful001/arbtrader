@@ -3,6 +3,7 @@ eBay Finding API client - fetches completed/sold listings for UK and US markets.
 Supports mock mode when USE_MOCK_DATA=true.
 """
 import uuid
+import base64
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 import random
@@ -38,11 +39,15 @@ MOCK_CARDS = [
     "Espeon Gold Star",
 ]
 
+_cached_token: Optional[str] = None
+_token_expires_at: Optional[datetime] = None
+
 
 class EbayClient:
     """
     eBay Finding API client for fetching recently sold card prices.
     Falls back to mock data when USE_MOCK_DATA=true.
+    Supports secure OAuth Client Credentials tokens to bypass anonymous rate limits.
     """
 
     def __init__(self, region: str = "UK"):
@@ -50,11 +55,61 @@ class EbayClient:
         self.base_url = EBAY_FINDING_ENDPOINTS[region]
         self.site_id = EBAY_SITE_IDS[region]
         self.headers = {
-            "X-EBAY-SOA-SECURITY-APPNAME": settings.EBAY_APP_ID,
             "X-EBAY-SOA-GLOBAL-ID": f"EBAY-{'GB' if region == 'UK' else 'US'}",
             "X-EBAY-SOA-SERVICE-VERSION": "1.0.0",
             "Content-Type": "application/json",
         }
+
+    async def _get_app_token(self) -> Optional[str]:
+        """Fetch or retrieve a cached eBay OAuth application access token using Client Credentials."""
+        global _cached_token, _token_expires_at
+        
+        # Check cache
+        if _cached_token and _token_expires_at and datetime.now(timezone.utc) < _token_expires_at:
+            return _cached_token
+
+        client_id = settings.EBAY_CLIENT_ID
+        client_secret = settings.EBAY_CLIENT_SECRET
+
+        if not client_id or not client_secret:
+            logger.warning("eBay Client ID or Client Secret not configured for OAuth. Falling back to legacy API auth.")
+            return None
+
+        # Determine endpoint environment based on App ID / Client ID prefix
+        is_sandbox = "SBX" in client_id or "sandbox" in (settings.EBAY_APP_ID or "").lower()
+        token_url = (
+            "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
+            if is_sandbox
+            else "https://api.ebay.com/identity/v1/oauth2/token"
+        )
+
+        credentials = f"{client_id}:{client_secret}"
+        encoded_creds = base64.b64encode(credentials.encode()).decode()
+
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Basic {encoded_creds}"
+        }
+
+        data = {
+            "grant_type": "client_credentials",
+            "scope": "https://api.ebay.com/oauth/api_scope"
+        }
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                resp = await client.post(token_url, data=data, headers=headers)
+                resp.raise_for_status()
+                token_data = resp.json()
+                _cached_token = token_data.get("access_token")
+                expires_in = token_data.get("expires_in", 7200)
+                # Expire token 5 minutes early as a buffer
+                _token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in - 300)
+                logger.info("Successfully refreshed eBay OAuth application access token.")
+                return _cached_token
+            except Exception as e:
+                logger.error("Failed to fetch eBay OAuth access token", error=str(e))
+                return None
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def get_completed_listings(
@@ -64,12 +119,19 @@ class EbayClient:
         if settings.USE_MOCK_DATA:
             return self._mock_completed_listings(card_name, limit)
 
+        # Try to obtain secure OAuth token
+        token = await self._get_app_token()
+
         async with httpx.AsyncClient(timeout=30.0) as client:
+            headers = self.headers.copy()
+            # The Finding API is a legacy API — it uses App ID auth only.
+            # OAuth Bearer tokens are for the modern eBay REST APIs and
+            # cause 500 errors on this endpoint. Always use SECURITY-APPNAME.
             params = {
                 "OPERATION-NAME": "findCompletedItems",
                 "SERVICE-VERSION": "1.0.0",
-                "SECURITY-APPNAME": settings.EBAY_APP_ID,
                 "RESPONSE-DATA-FORMAT": "JSON",
+                "SECURITY-APPNAME": settings.EBAY_APP_ID,
                 "keywords": card_name,
                 "categoryId": "2536",  # Pokémon cards
                 "itemFilter(0).name": "SoldItemsOnly",
@@ -77,8 +139,10 @@ class EbayClient:
                 "paginationInput.entriesPerPage": str(limit),
                 "sortOrder": "EndTimeSoonest",
             }
+            headers["X-EBAY-SOA-SECURITY-APPNAME"] = settings.EBAY_APP_ID
+
             try:
-                resp = await client.get(self.base_url, params=params, headers=self.headers)
+                resp = await client.get(self.base_url, params=params, headers=headers)
                 resp.raise_for_status()
                 data = resp.json()
                 items = (
