@@ -27,7 +27,6 @@ async def lifespan(app: FastAPI):
     # await telegram_bot.close()
     await engine.dispose()
 
-
 app = FastAPI(
     title="ArbTrader API",
     description="Arbitrage intelligence platform for trading cards",
