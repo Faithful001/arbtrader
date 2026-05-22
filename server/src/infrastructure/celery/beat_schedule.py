@@ -1,7 +1,3 @@
-"""
-Celery Beat schedule - defines periodic task intervals.
-All intervals are configurable via settings.
-"""
 from celery.schedules import crontab
 
 from src.core.config import settings
