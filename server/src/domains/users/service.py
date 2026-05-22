@@ -65,7 +65,7 @@ class UserService:
         
         # Log to console for development
         print("="*40)
-        print(f" OTP for {email}: {otp} ")
+        print(f" OTP for {email}: {otp} ", flush=True)
         print("="*40)
         
         return otp
