@@ -5,6 +5,7 @@ from telegram import Bot
 from telegram.constants import MessageLimit
 # pyrefly: ignore [missing-import]
 from telegram.error import TelegramError
+import asyncio
 
 from src.core.config import settings
 
@@ -39,13 +40,16 @@ class TelegramBot:
 
         return self._bot
 
+ 
+
     async def close(self) -> None:
-        """Shut down the bot connection gracefully. Call on app shutdown."""
         if self._bot is None or not self._initialized:
-            return  # nothing to close
+            return
         try:
-            await self._bot.shutdown()
+            await asyncio.wait_for(self._bot.shutdown(), timeout=3.0)
             logger.info("Telegram bot shut down")
+        except asyncio.TimeoutError:
+            logger.warning("Telegram bot shutdown timed out, forcing close")
         except Exception as e:
             logger.warning("Telegram bot shutdown error", error=str(e))
         finally:
