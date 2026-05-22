@@ -52,9 +52,8 @@ prompt_toolkit==3.0.52
 psycopg2-binary==2.9.9
 pyasn1==0.6.3
 pycparser==3.0
-pydantic==2.7.1
-pydantic-settings==2.2.1
-pydantic_core==2.18.2
+pydantic>=2.7.1
+pydantic-settings>=2.2.1
 Pygments==2.20.0
 python-dateutil==2.9.0
 python-dotenv==1.0.1
