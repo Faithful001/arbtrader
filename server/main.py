@@ -3,6 +3,7 @@ ArbTrader - FastAPI Application Entry Point
 """
 import structlog
 from contextlib import asynccontextmanager
+from src.infrastructure.external_apis.telegram.bot import telegram_bot
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,9 +22,9 @@ logger = structlog.get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown."""
     logger.info("ArbTrader starting up", env=settings.APP_ENV)
-    # Tables are managed by Alembic; no auto-create in production
     yield
     logger.info("ArbTrader shutting down")
+    await telegram_bot.close()
     await engine.dispose()
 
 

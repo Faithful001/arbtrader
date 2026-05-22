@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Spinner from "../../../shared/Spinner";
+import { toast } from "sonner";
 
 const TRIGGER_LABELS: Record<string, string> = {
   new_opportunity: "NEW OPP",
@@ -9,7 +10,7 @@ const TRIGGER_LABELS: Record<string, string> = {
   auction_ending: "AUC ENDING",
 };
 
-import { alertsApi } from '../api/alerts.api'
+import { alertsApi } from "../api/alerts.api";
 
 function useAlerts() {
   return useQuery({
@@ -29,42 +30,54 @@ export default function AlertsDashboard() {
 
   const displayed = alerts;
 
-  const toggle = async (id: string) => {
-    const alert = displayed.find((a: any) => a.id === id);
-    if (!alert) return;
-    try {
+  const toggleAlertMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const alert = displayed.find((a: any) => a.id === id);
+      if (!alert) return;
       await alertsApi.updateAlert(id, { is_active: !alert.is_active });
+    },
+    onSuccess: () => {
       refetch();
-    } catch (error) {
-      console.error("Failed to toggle alert", error);
-    }
-  };
-  
-  const remove = async (id: string) => {
-    try {
+      toast.success(`Rule "${alert.name.toUpperCase()}" status updated!`);
+    },
+    onError: () => {
+      toast.error("Failed to update alert status");
+    },
+  });
+
+  const removeAlertMutation = useMutation({
+    mutationFn: async (id: string) => {
       await alertsApi.deleteAlert(id);
+    },
+    onSuccess: () => {
       refetch();
-    } catch (error) {
-      console.error("Failed to remove alert", error);
-    }
-  };
-  
-  const create = async () => {
-    if (!newAlert.name.trim()) return;
-    try {
+      toast.success("Alert successfully deleted!");
+    },
+    onError: () => {
+      toast.error("Failed to delete alert");
+    },
+  });
+
+  const createAlertMutation = useMutation({
+    mutationFn: async () => {
+      if (!newAlert.name.trim()) return;
       await alertsApi.createAlert({
         name: newAlert.name,
         trigger_type: newAlert.trigger_type,
         conditions: { min_profit_gbp: newAlert.min_profit },
         delivery_channel: "telegram",
       });
+    },
+    onSuccess: () => {
+      toast.success(`Rule "${newAlert.name.toUpperCase()}" successfully deployed!`);
       setShowCreate(false);
       setNewAlert({ name: "", trigger_type: "new_opportunity", min_profit: 10 });
       refetch();
-    } catch (error) {
-      console.error("Failed to create alert", error);
-    }
-  };
+    },
+    onError: () => {
+      toast.error("Failed to create alert");
+    },
+  });
 
   return (
     <div className="main-view">
@@ -144,8 +157,12 @@ export default function AlertsDashboard() {
                 />
               </div>
               <div>
-                <button className="btn-dense btn-action" onClick={create}>
-                  DEPLOY RULE
+                <button
+                  className="btn-dense btn-action"
+                  onClick={() => createAlertMutation.mutate()}
+                  disabled={createAlertMutation.isPending}
+                >
+                  {createAlertMutation.isPending ? "DEPLOYING..." : "DEPLOY RULE"}
                 </button>
               </div>
             </div>
@@ -192,17 +209,21 @@ export default function AlertsDashboard() {
                   <td className="right">
                     <button
                       className="btn-dense"
-                      onClick={() => toggle(a.id)}
+                      onClick={() => toggleAlertMutation.mutate(a.id)}
                       style={{ marginRight: 8 }}
                     >
-                      {a.is_active ? "HALT" : "START"}
+                      {toggleAlertMutation.isPending
+                        ? "UPDATING..."
+                        : a.is_active
+                          ? "HALT"
+                          : "START"}
                     </button>
                     <button
                       className="btn-dense"
-                      onClick={() => remove(a.id)}
+                      onClick={() => removeAlertMutation.mutate(a.id)}
                       style={{ color: "var(--loss)" }}
                     >
-                      DEL
+                      {removeAlertMutation.isPending ? "DEL..." : "DEL"}
                     </button>
                   </td>
                 </tr>

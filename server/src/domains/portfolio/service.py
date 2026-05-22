@@ -19,7 +19,7 @@ class PortfolioService:
         from src.domains.pricing.models import PriceNormalized
         from sqlalchemy import desc
 
-        # Query the latest normalized price for this card to set as current market value
+        #Query the latest normalized price for this card to set as current market value
         latest_price_stmt = (
             select(PriceNormalized)
             .where(PriceNormalized.card_id == data.card_id)

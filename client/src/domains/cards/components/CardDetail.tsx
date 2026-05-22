@@ -11,13 +11,56 @@ import {
 import { useQuery } from "@tanstack/react-query";
 
 import { cardsApi } from "../api/cards.api";
+import { marketsApi } from "../../markets/api/markets.api";
 import Spinner from "../../../shared/Spinner";
+
+function useMarkets() {
+  return useQuery({
+    queryKey: ["markets"],
+    queryFn: () => marketsApi.getMarkets(),
+  });
+}
 
 function usePriceHistory(cardId: string) {
   return useQuery({
     queryKey: ["price-history", cardId],
     queryFn: async () => {
-      return [] as Array<{ date: string; uk: number; us: number }>;
+      const markets = await marketsApi.getMarkets();
+      const ukMarket = markets.find((m: any) => m.region === "UK");
+      const usMarket = markets.find((m: any) => m.region === "US");
+
+      const [ukHistory, usHistory] = await Promise.all([
+        ukMarket ? cardsApi.getPriceHistory(cardId, ukMarket.id, 30) : Promise.resolve([]),
+        usMarket ? cardsApi.getPriceHistory(cardId, usMarket.id, 30) : Promise.resolve([]),
+      ]);
+
+      const dataMap = new Map<string, { date: string; uk: number; us: number }>();
+
+      ukHistory.forEach((h: any) => {
+        const date = new Date(h.snapshot_at).toISOString().split("T")[0];
+        if (!dataMap.has(date)) dataMap.set(date, { date, uk: 0, us: 0 });
+        dataMap.get(date)!.uk = h.price_gbp;
+      });
+
+      usHistory.forEach((h: any) => {
+        const date = new Date(h.snapshot_at).toISOString().split("T")[0];
+        if (!dataMap.has(date)) dataMap.set(date, { date, uk: 0, us: 0 });
+        dataMap.get(date)!.us = h.price_gbp;
+      });
+
+      const merged = Array.from(dataMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+      let lastUk = 0;
+      let lastUs = 0;
+      merged.forEach((row) => {
+        if (row.uk > 0) lastUk = row.uk;
+        else row.uk = lastUk;
+
+        if (row.us > 0) lastUs = row.us;
+        else row.us = lastUs;
+      });
+
+      return merged;
     },
   });
 }
@@ -56,17 +99,22 @@ export default function CardDetail() {
   const navigate = useNavigate();
   const { data: card, isLoading: cardLoading } = useCard(id!);
   const { data: history } = usePriceHistory(id!);
+  const { data: markets } = useMarkets();
 
-  if (cardLoading)
-    return <Spinner label="LOADING ASSET DATA..." />;
+  if (cardLoading) return <Spinner label="LOADING ASSET DATA..." />;
+
+  const usMarket = markets?.find((m: any) => m.region === "US");
 
   const ukPrice = history?.[history.length - 1]?.uk ?? 0;
   const usPrice = history?.[history.length - 1]?.us ?? 0;
   const spread = usPrice - ukPrice;
-  const fees = usPrice * 0.129;
-  const shipping = 12;
+
+  const feePercent = usMarket?.fee_percent ?? 0.129;
+  const fees = usPrice * feePercent;
+  const shipping = usMarket?.shipping_estimate_gbp ?? 12;
+
   const netProfit = spread - fees - shipping;
-  const roi = (netProfit / ukPrice) * 100;
+  const roi = ukPrice > 0 ? (netProfit / ukPrice) * 100 : 0;
 
   return (
     <div className="main-view">
@@ -121,7 +169,7 @@ export default function CardDetail() {
                     <td className="right numeric text-bright">£{spread.toFixed(2)}</td>
                   </tr>
                   <tr>
-                    <td className="mono">Platform Fees (12.9%)</td>
+                    <td className="mono">Platform Fees ({(feePercent * 100).toFixed(1)}%)</td>
                     <td className="right numeric text-loss">-£{fees.toFixed(2)}</td>
                   </tr>
                   <tr>
@@ -205,19 +253,21 @@ export default function CardDetail() {
           {/* Right Column: Asset Metadata */}
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <div className="panel" style={{ padding: 0 }}>
-              <img
-                src={card?.image_url}
-                alt={card?.name}
-                style={{
-                  width: "100%",
-                  display: "block",
-                  borderBottom: "1px solid var(--border-dim)",
-                }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://placehold.co/280x390/111216/22252C?text=NO+IMAGE";
-                }}
-              />
+              {card?.image_url && (
+                <img
+                  src={card?.image_url}
+                  alt={card?.name}
+                  style={{
+                    width: "100%",
+                    display: "block",
+                    borderBottom: "1px solid var(--border-dim)",
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src =
+                      "https://placehold.co/280x390/111216/22252C?text=NO+IMAGE";
+                  }}
+                />
+              )}
               <div style={{ padding: 16 }}>
                 <div className="view-title" style={{ marginBottom: 12 }}>
                   ASSET METADATA

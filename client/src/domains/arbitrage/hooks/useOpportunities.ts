@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { arbitrageApi } from '../api/arbitrage.api'
+import { toast } from 'sonner'
 
 export function useOpportunities(params?: {
   skip?: number
@@ -26,6 +27,10 @@ export function useRecalculate() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: arbitrageApi.triggerRecalculate,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['opportunities'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['opportunities'] })
+      toast.success("Cross-market spreads synced successfully!")
+    },
   })
 }
+

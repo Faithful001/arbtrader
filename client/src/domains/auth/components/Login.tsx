@@ -32,7 +32,7 @@ export default function Login() {
     setError('')
     try {
       const { access_token } = await authApi.verifyOtp(email, otp)
-      login(access_token)
+      login(access_token, email)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid OTP')
     } finally {

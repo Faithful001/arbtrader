@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './domains/auth/context/AuthContext'
+import { Toaster } from 'sonner'
 import Login from './domains/auth/components/Login'
 import Layout from './shared/Layout'
 import OpportunityFeed from './domains/arbitrage/components/OpportunityFeed'
@@ -19,6 +20,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthProvider>
+      <Toaster richColors theme="dark" position="top-right" />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -34,3 +36,4 @@ export default function App() {
     </AuthProvider>
   )
 }
+
