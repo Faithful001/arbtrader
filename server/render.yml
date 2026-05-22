@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: arbtrader-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - fromGroup: arbtrader-env
+
+  - type: worker
+    name: arbtrader-worker
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A src.infrastructure.celery.app worker --loglevel=info
+    envVars:
+      - fromGroup: arbtrader-env
+
+  - type: worker
+    name: arbtrader-beat
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A src.infrastructure.celery.app beat --loglevel=info
+    envVars:
+      - fromGroup: arbtrader-env

@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     logger.info("ArbTrader starting up", env=settings.APP_ENV)
     yield
     logger.info("ArbTrader shutting down")
-    await telegram_bot.close()
+    # await telegram_bot.close()
     await engine.dispose()
 
 
