@@ -36,7 +36,9 @@ def send_otp(self, email: str, otp: str):
         msg.attach(MIMEText(html, "html"))
 
         print("Connecting to SMTP...", flush=True)
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
             print("Logging in...", flush=True)
             server.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
             print("Sending...", flush=True)
