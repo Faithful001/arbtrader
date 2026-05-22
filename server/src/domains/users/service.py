@@ -1,4 +1,5 @@
 """Users domain - service layer."""
+from server.src.infrastructure.redis.client import redis_client
 import uuid
 import random
 from typing import Optional
@@ -53,9 +54,8 @@ class UserService:
         send_otp.delay(email, otp)
         
         # Store in Redis
-        redis = Redis.from_url(settings.REDIS_URL, decode_responses=True)
-        await redis.setex(f"otp:{email}", 300, otp)  # 5 minutes expiry
-        await redis.aclose()
+        await redis_client.setex(f"otp:{email}", 300, otp)  # 5 minutes expiry
+        # await redis_client.aclose()
         
         # Log to console for development
         print("="*40)
@@ -65,16 +65,15 @@ class UserService:
         return otp
 
     async def verify_otp(self, db: AsyncSession, email: str, otp: str) -> Optional[str]:
-        redis = Redis.from_url(settings.REDIS_URL, decode_responses=True)
-        stored_otp = await redis.get(f"otp:{email}")
+        stored_otp = await redis_client.get(f"otp:{email}")
         
         if not stored_otp or stored_otp != otp:
-            await redis.aclose()
+            # await redis_client.aclose()
             return None
             
         # Clear the OTP
-        await redis.delete(f"otp:{email}")
-        await redis.aclose()
+        await redis_client.delete(f"otp:{email}")
+        # await redis_client.aclose()
         
         user = await self.get_by_email(db, email)
         if not user:

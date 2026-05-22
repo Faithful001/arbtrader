@@ -1,6 +1,7 @@
 """
 ArbTrader - FastAPI Application Entry Point
 """
+from server.src.infrastructure.redis.client import redis_client
 import structlog
 from contextlib import asynccontextmanager
 from src.infrastructure.external_apis.telegram.bot import telegram_bot
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("ArbTrader shutting down")
     # await telegram_bot.close()
+    await redis_client.aclose()
     await engine.dispose()
 
 app = FastAPI(
