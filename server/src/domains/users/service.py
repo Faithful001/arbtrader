@@ -1,5 +1,5 @@
 """Users domain - service layer."""
-from server.src.infrastructure.redis.client import redis_client
+from src.infrastructure.redis.client import redis_client
 import uuid
 import random
 from typing import Optional
