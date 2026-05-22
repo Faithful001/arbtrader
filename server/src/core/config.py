@@ -16,9 +16,9 @@ class Settings(BaseSettings):
     )
 
     # App
-    APP_ENV: str = "development"
-    APP_SECRET_KEY: str = "dev-secret-key-change-in-production"
-    APP_DEBUG: bool = True
+    APP_ENV: str = os.getenv("APP_ENV")
+    APP_SECRET_KEY: str = os.getenv("APP_SECRET_KEY")
+    APP_DEBUG: bool = os.getenv("APP_DEBUG")
     CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "https://arbtradr.vercel.app"]
 
     @field_validator("CORS_ORIGINS", mode="before")
