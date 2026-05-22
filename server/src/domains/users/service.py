@@ -1,4 +1,5 @@
 """Users domain - service layer."""
+import structlog
 from src.infrastructure.redis.client import redis_client
 import uuid
 import random
@@ -13,6 +14,9 @@ from src.domains.users.tasks import send_otp
 from src.domains.users.models import User
 from src.domains.users.schemas import UserCreate, UserUpdate
 from src.core.security import hash_password, verify_password, create_access_token
+
+
+logger = structlog.get_logger(__name__)
 
 
 class UserService:
@@ -52,6 +56,8 @@ class UserService:
         otp = str(random.randint(100000, 999999))
         
         send_otp.delay(email, otp)
+
+        logger.info("Task queued", email=email)
         
         # Store in Redis
         await redis_client.setex(f"otp:{email}", 300, otp)  # 5 minutes expiry
