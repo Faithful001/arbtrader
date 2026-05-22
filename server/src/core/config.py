@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = os.getenv("REDIS_URL")
 
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY")
+
+    GMAIL_USER: str = os.getenv("GMAIL_USER")
+    GMAIL_APP_PASSWORD: str = os.getenv("GMAIL_APP_PASSWORD")
+
     # eBay
     EBAY_APP_ID: Optional[str] = os.getenv("EBAY_APP_ID")
     EBAY_DEV_ID: Optional[str] = os.getenv("EBAY_DEV_ID")

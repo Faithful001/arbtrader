@@ -8,7 +8,7 @@ from sqlalchemy import select
 from redis.asyncio import Redis
 
 from src.core.config import settings
-
+from src.domains.users.tasks import send_otp
 from src.domains.users.models import User
 from src.domains.users.schemas import UserCreate, UserUpdate
 from src.core.security import hash_password, verify_password, create_access_token
@@ -46,9 +46,11 @@ class UserService:
             # Create user if doesn't exist
             from src.domains.users.schemas import UserCreate
             user = await self.create_user(db, UserCreate(email=email))
-            
+
         # Generate 6 digit OTP
         otp = str(random.randint(100000, 999999))
+        
+        send_otp.delay(email, otp)
         
         # Store in Redis
         redis = Redis.from_url(settings.REDIS_URL, decode_responses=True)

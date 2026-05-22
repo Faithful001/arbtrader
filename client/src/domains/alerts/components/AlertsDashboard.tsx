@@ -191,7 +191,7 @@ export default function AlertsDashboard() {
               {displayed.map((a: any) => (
                 <tr key={a.id} style={{ opacity: a.is_active ? 1 : 0.5 }}>
                   <td
-                    className="mono"
+                    className={`mono`}
                     style={{ color: a.is_active ? "var(--profit)" : "var(--text-muted)" }}
                   >
                     {a.is_active ? "RUNNING" : "HALTED"}
@@ -208,22 +208,24 @@ export default function AlertsDashboard() {
                   <td className="mono">TELEGRAM</td>
                   <td className="right">
                     <button
-                      className="btn-dense"
+                      className={`btn-dense ${toggleAlertMutation.isPending && toggleAlertMutation.variables === a.id ? "opacity-50 disabled disabled:cursor-not-allowed" : ""}`}
                       onClick={() => toggleAlertMutation.mutate(a.id)}
                       style={{ marginRight: 8 }}
                     >
-                      {toggleAlertMutation.isPending
+                      {toggleAlertMutation.isPending && toggleAlertMutation.variables === a.id
                         ? "UPDATING..."
                         : a.is_active
                           ? "HALT"
                           : "START"}
                     </button>
                     <button
-                      className="btn-dense"
+                      className={`btn-dense ${removeAlertMutation.isPending && removeAlertMutation.variables === a.id ? "opacity-50 disabled disabled:cursor-not-allowed" : ""}`}
                       onClick={() => removeAlertMutation.mutate(a.id)}
                       style={{ color: "var(--loss)" }}
                     >
-                      {removeAlertMutation.isPending ? "DEL..." : "DEL"}
+                      {removeAlertMutation.isPending && removeAlertMutation.variables === a.id
+                        ? "DEL..."
+                        : "DEL"}
                     </button>
                   </td>
                 </tr>

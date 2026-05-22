@@ -277,11 +277,14 @@ export default function PortfolioView() {
                             </td>
                             <td className="right">
                               <button
-                                className="btn-dense"
+                                className={`btn-dense ${removeHoldingMutation.isPending && removeHoldingMutation.variables === h.id ? "opacity-50 disabled disabled:cursor-not-allowed" : "cursor-pointer"}`}
                                 style={{ color: "var(--loss)" }}
                                 onClick={() => removeHoldingMutation.mutate(h.id)}
                               >
-                                {removeHoldingMutation.isPending ? "LIQ..." : "LIQ"}
+                                {removeHoldingMutation.isPending &&
+                                removeHoldingMutation.variables === h.id
+                                  ? "LIQ..."
+                                  : "LIQ"}
                               </button>
                             </td>
                           </tr>

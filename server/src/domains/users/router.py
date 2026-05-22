@@ -13,7 +13,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.post("/auth/request-otp", status_code=200)
 async def request_otp(data: OTPRequest, db: AsyncSession = Depends(get_db)):
     await user_service.request_otp(db, data.email)
-    return {"message": "OTP generated and logged to console"}
+    return {"message": "Otp sent to your email. Check Spam if you don't see it in your inbox"}
 
 
 @router.post("/auth/verify-otp", response_model=TokenResponse)

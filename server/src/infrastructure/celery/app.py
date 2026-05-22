@@ -11,6 +11,7 @@ app = Celery(
         "src.domains.arbitrage.tasks",
         "src.domains.alerts.tasks",
         "src.domains.portfolio.tasks",
+        "src.domains.users.tasks",
     ],
 )
 
