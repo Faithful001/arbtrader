@@ -33,7 +33,7 @@ app.conf.update(
     worker_gossip=False,        # disables node discovery (saves 1-2 connections)
     worker_heartbeat=None,      # disables heartbeat (saves 1 connection)
     broker_pool_limit=1,        # limit broker connection pool to 1
-    redis_max_connections=5,    # hard cap on Redis connections
+    redis_max_connections=3,    # hard cap on Redis connections
 )
 
 # Import beat schedule after app is configured
