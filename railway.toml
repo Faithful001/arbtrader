@@ -1,0 +1,9 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "bash start.sh"
+
+[[services]]
+name = "arbtrader"
+rootDirectory = "server"
