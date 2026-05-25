@@ -17,6 +17,11 @@ export const arbitrageApi = {
     return data
   },
 
+  getOpportunityByCard: async (cardId: string) => {
+    const { data } = await apiClient.get(`/arbitrage/card/${cardId}`)
+    return data
+  },
+
   triggerRecalculate: async () => {
     const { data } = await apiClient.post('/arbitrage/recalculate')
     return data

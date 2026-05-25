@@ -87,7 +87,8 @@ export default function PortfolioView() {
     (s: number, h: any) => s + (h.current_value_gbp ?? h.buy_price_gbp) * (h.quantity ?? 0),
     0
   );
-  const totalPnl = currentValue - totalInvested;
+  // Sum net P&L from backend (already deducts platform fees + shipping per position)
+  const totalPnl = displayed?.reduce((s: number, h: any) => s + (h.unrealized_pnl_gbp ?? 0), 0);
   const roi = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
 
   const removeHoldingMutation = useMutation({
@@ -246,8 +247,8 @@ export default function PortfolioView() {
                     </thead>
                     <tbody>
                       {displayed.map((h: any) => {
-                        const pnl = (h.current_value_gbp - h.buy_price_gbp) * h.quantity;
-                        const r = ((h.current_value_gbp - h.buy_price_gbp) / h.buy_price_gbp) * 100;
+                        const pnl = h.unrealized_pnl_gbp ?? 0;
+                        const r = h.unrealized_pnl_percent ?? 0;
                         return (
                           <tr key={h.id}>
                             <td>

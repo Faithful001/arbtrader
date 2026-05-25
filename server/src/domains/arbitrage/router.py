@@ -18,6 +18,7 @@ async def get_opportunity_feed(
     limit: int = Query(20, ge=1, le=100),
     min_profit: Optional[float] = Query(None),
     min_confidence: Optional[float] = Query(None),
+    rarity: Optional[str] = Query(None),
     sort_by: str = Query("net_profit_gbp", regex="^(net_profit_gbp|roi_percent|confidence_score)$"),
     db: AsyncSession = Depends(get_db),
 ):
@@ -38,6 +39,7 @@ async def get_opportunity_feed(
         min_profit=min_profit,
         min_confidence=min_confidence,
         sort_by=sort_by,
+        rarity=rarity,
     )
     return OpportunityFeedResponse(
         items=items,
@@ -45,6 +47,11 @@ async def get_opportunity_feed(
         page=skip // limit + 1,
         page_size=limit,
     )
+
+
+@router.get("/card/{card_id}", response_model=Optional[OpportunityResponse])
+async def get_opportunity_by_card(card_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    return await arbitrage_service.get_opportunity_by_card_id(db, card_id)
 
 
 @router.get("/{opportunity_id}", response_model=OpportunityResponse)

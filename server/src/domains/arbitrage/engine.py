@@ -55,10 +55,24 @@ def _median(values: List[float]) -> float:
     return s[mid] if len(s) % 2 else (s[mid - 1] + s[mid]) / 2
 
 
-def weighted_avg_price(data_points: List[PriceDataPoint], now: datetime) -> float:
-    """Recency-weighted average price from data points."""
+def weighted_avg_price(data_points: List[PriceDataPoint], now: datetime, is_uk_market: bool = False) -> float:
+    """Recency-weighted average price from data points. For UK markets, simple average of last 3 sales is used."""
     if not data_points:
         return 0.0
+
+    # Filter out cheap outliers (e.g. proxy cards/code cards under 30% of maximum price in batch)
+    max_price = max(dp.price_gbp for dp in data_points)
+    if max_price > 0:
+        data_points = [dp for dp in data_points if dp.price_gbp >= 0.3 * max_price]
+        if not data_points:
+            return 0.0
+
+    if is_uk_market:
+        # Sort by sold_at descending (latest sales first)
+        sorted_dps = sorted(data_points, key=lambda dp: dp.sold_at, reverse=True)
+        last_3 = sorted_dps[:3]
+        return sum(dp.price_gbp for dp in last_3) / len(last_3)
+
     weights = [_recency_weight(dp.sold_at, now) for dp in data_points]
     total_weight = sum(weights)
     if total_weight == 0:
@@ -110,6 +124,8 @@ def calculate_arbitrage(
     sell_fee_percent: float,
     shipping_cost_gbp: float,
     import_duties_gbp: float = 0.0,
+    is_buy_uk: bool = False,
+    is_sell_uk: bool = False,
 ) -> Optional[ArbitrageResult]:
     """
     Core arbitrage calculation. Returns None if not profitable enough.
@@ -119,8 +135,8 @@ def calculate_arbitrage(
     if all_points < 2:
         return None
 
-    buy_price = weighted_avg_price(buy_data_points, now)
-    sell_price = weighted_avg_price(sell_data_points, now)
+    buy_price = weighted_avg_price(buy_data_points, now, is_uk_market=is_buy_uk)
+    sell_price = weighted_avg_price(sell_data_points, now, is_uk_market=is_sell_uk)
 
     if buy_price <= 0 or sell_price <= 0:
         return None

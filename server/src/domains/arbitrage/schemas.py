@@ -10,6 +10,7 @@ class OpportunityResponse(BaseModel):
     card_id: uuid.UUID
     card_name: Optional[str] = None
     card_image_url: Optional[str] = None
+    card_rarity: Optional[str] = None
     buy_market_id: uuid.UUID
     sell_market_id: uuid.UUID
     buy_market_name: Optional[str] = None

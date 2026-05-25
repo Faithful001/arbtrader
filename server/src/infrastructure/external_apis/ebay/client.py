@@ -1,9 +1,8 @@
 """
-eBay Finding API client - fetches completed/sold listings for UK and US markets.
+eBay Browse API client - fetches active listings for UK and US markets.
 Supports mock mode when USE_MOCK_DATA=true.
 """
 import uuid
-import base64
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 import random
@@ -16,14 +15,14 @@ from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
-EBAY_FINDING_ENDPOINTS = {
-    "UK": "https://svcs.ebay.com/services/search/FindingService/v1",
-    "US": "https://svcs.ebay.com/services/search/FindingService/v1",
+EBAY_BROWSE_ENDPOINTS = {
+    "UK": "https://api.ebay.com/buy/browse/v1/item_summary/search",
+    "US": "https://api.ebay.com/buy/browse/v1/item_summary/search",
 }
 
-EBAY_SITE_IDS = {
-    "UK": "3",   # eBay UK
-    "US": "0",   # eBay US
+EBAY_MARKETPLACE_IDS = {
+    "UK": "EBAY_GB",
+    "US": "EBAY_US",
 }
 
 MOCK_CARDS = [
@@ -45,26 +44,20 @@ _token_expires_at: Optional[datetime] = None
 
 class EbayClient:
     """
-    eBay Finding API client for fetching recently sold card prices.
+    eBay Browse API client for fetching active card listings.
     Falls back to mock data when USE_MOCK_DATA=true.
-    Supports secure OAuth Client Credentials tokens to bypass anonymous rate limits.
+    Requires OAuth Client Credentials token.
     """
 
     def __init__(self, region: str = "UK"):
         self.region = region
-        self.base_url = EBAY_FINDING_ENDPOINTS[region]
-        self.site_id = EBAY_SITE_IDS[region]
-        self.headers = {
-            "X-EBAY-SOA-GLOBAL-ID": f"EBAY-{'GB' if region == 'UK' else 'US'}",
-            "X-EBAY-SOA-SERVICE-VERSION": "1.0.0",
-            "Content-Type": "application/json",
-        }
+        self.base_url = EBAY_BROWSE_ENDPOINTS[region]
+        self.marketplace_id = EBAY_MARKETPLACE_IDS[region]
 
     async def _get_app_token(self) -> Optional[str]:
-        """Fetch or retrieve a cached eBay OAuth application access token using Client Credentials."""
+        """Fetch or retrieve a cached eBay OAuth application access token."""
         global _cached_token, _token_expires_at
-        
-        # Check cache
+
         if _cached_token and _token_expires_at and datetime.now(timezone.utc) < _token_expires_at:
             return _cached_token
 
@@ -72,103 +65,98 @@ class EbayClient:
         client_secret = settings.EBAY_CLIENT_SECRET
 
         if not client_id or not client_secret:
-            logger.warning("eBay Client ID or Client Secret not configured for OAuth. Falling back to legacy API auth.")
+            logger.warning("eBay Client ID or Secret not configured.")
             return None
 
-        # Determine endpoint environment based on App ID / Client ID prefix
-        is_sandbox = "SBX" in client_id or "sandbox" in (settings.EBAY_APP_ID or "").lower()
+        import base64
+        is_sandbox = "SBX" in client_id
         token_url = (
             "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
             if is_sandbox
             else "https://api.ebay.com/identity/v1/oauth2/token"
         )
 
-        credentials = f"{client_id}:{client_secret}"
-        encoded_creds = base64.b64encode(credentials.encode()).decode()
-
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Basic {encoded_creds}"
-        }
-
-        data = {
-            "grant_type": "client_credentials",
-            "scope": "https://api.ebay.com/oauth/api_scope"
-        }
+        encoded_creds = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
-                resp = await client.post(token_url, data=data, headers=headers)
+                resp = await client.post(
+                    token_url,
+                    data={
+                        "grant_type": "client_credentials",
+                        "scope": "https://api.ebay.com/oauth/api_scope",
+                    },
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Authorization": f"Basic {encoded_creds}",
+                    },
+                )
                 resp.raise_for_status()
                 token_data = resp.json()
                 _cached_token = token_data.get("access_token")
                 expires_in = token_data.get("expires_in", 7200)
-                # Expire token 5 minutes early as a buffer
                 _token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in - 300)
-                logger.info("Successfully refreshed eBay OAuth application access token.")
+                logger.info("eBay OAuth token refreshed")
                 return _cached_token
             except Exception as e:
-                logger.error("Failed to fetch eBay OAuth access token", error=str(e))
+                logger.error("Failed to fetch eBay OAuth token", error=str(e))
                 return None
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def get_completed_listings(
         self, card_name: str, limit: int = 20
     ) -> List[Dict[str, Any]]:
-        """Fetch completed/sold listings for a card name."""
+        """Fetch active listings for a card name."""
         if settings.USE_MOCK_DATA:
             return self._mock_completed_listings(card_name, limit)
 
-        # Try to obtain secure OAuth token
         token = await self._get_app_token()
+        if not token:
+            logger.warning("No eBay token available, falling back to mock data")
+            return self._mock_completed_listings(card_name, limit)
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            headers = self.headers.copy()
-            # The Finding API is a legacy API — it uses App ID auth only.
-            # OAuth Bearer tokens are for the modern eBay REST APIs and
-            # cause 500 errors on this endpoint. Always use SECURITY-APPNAME.
-            params = {
-                "OPERATION-NAME": "findCompletedItems",
-                "SERVICE-VERSION": "1.0.0",
-                "RESPONSE-DATA-FORMAT": "JSON",
-                "SECURITY-APPNAME": settings.EBAY_APP_ID,
-                "keywords": card_name,
-                "categoryId": "2536",  # Pokémon cards
-                "itemFilter(0).name": "SoldItemsOnly",
-                "itemFilter(0).value": "true",
-                "paginationInput.entriesPerPage": str(limit),
-                "sortOrder": "EndTimeSoonest",
-            }
-            headers["X-EBAY-SOA-SECURITY-APPNAME"] = settings.EBAY_APP_ID
-
             try:
-                resp = await client.get(self.base_url, params=params, headers=headers)
+                resp = await client.get(
+                    self.base_url,
+                    params={
+                        "q": card_name,
+                        "category_ids": "183454",  # Pokémon TCG category
+                        "limit": str(limit),
+                        "sort": "price",
+                    },
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "X-EBAY-C-MARKETPLACE-ID": self.marketplace_id,
+                        "X-EBAY-C-ENDUSERCTX": f"contextualLocation=country={('GB' if self.region == 'UK' else 'US')}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                logger.info("eBay Browse API response", status=resp.status_code, region=self.region, card=card_name)
                 resp.raise_for_status()
                 data = resp.json()
-                items = (
-                    data.get("findCompletedItemsResponse", [{}])[0]
-                    .get("searchResult", [{}])[0]
-                    .get("item", [])
-                )
+                items = data.get("itemSummaries", [])
                 return [self._parse_item(item) for item in items]
+
             except httpx.HTTPError as e:
-                logger.error("eBay API error", region=self.region, card=card_name, error=str(e))
+                logger.error("eBay Browse API error", region=self.region, card=card_name, error=str(e))
                 return self._mock_completed_listings(card_name, limit)
 
     def _parse_item(self, item: Dict) -> Dict[str, Any]:
+        price_info = item.get("price", {})
         return {
-            "external_id": item.get("itemId", [None])[0],
-            "title": item.get("title", [""])[0],
-            "price": float(item.get("sellingStatus", [{}])[0].get("currentPrice", [{}])[0].get("__value__", 0)),
-            "currency": item.get("sellingStatus", [{}])[0].get("currentPrice", [{}])[0].get("@currencyId", "GBP"),
-            "condition": item.get("condition", [{}])[0].get("conditionDisplayName", ["Raw"])[0],
-            "sold_at": item.get("listingInfo", [{}])[0].get("endTime", [datetime.now(timezone.utc).isoformat()])[0],
-            "url": item.get("viewItemURL", [""])[0],
+            "external_id": item.get("itemId"),
+            "title": item.get("title", ""),
+            "price": float(price_info.get("value", 0)),
+            "currency": price_info.get("currency", "GBP" if self.region == "UK" else "USD"),
+            "condition": item.get("condition", "Unknown"),
+            "sold_at": item.get("itemEndDate") or datetime.now(timezone.utc).isoformat(),
+            "url": item.get("itemWebUrl", ""),
             "region": self.region,
         }
 
     def _mock_completed_listings(self, card_name: str, limit: int) -> List[Dict[str, Any]]:
-        """Generate realistic mock sold listings for development."""
+        """Generate realistic mock listings for development."""
         base_prices = {
             "UK": {"mean": 85.0, "variance": 30.0, "currency": "GBP"},
             "US": {"mean": 95.0, "variance": 40.0, "currency": "USD"},

@@ -17,16 +17,27 @@ class PortfolioService:
 
     async def add_holding(self, db: AsyncSession, user_id: uuid.UUID, data: PortfolioCreate) -> Portfolio:
         from src.domains.pricing.models import PriceNormalized
+        from src.domains.markets.models import Market
         from sqlalchemy import desc
 
-        #Query the latest normalized price for this card to set as current market value
-        latest_price_stmt = (
-            select(PriceNormalized)
-            .where(PriceNormalized.card_id == data.card_id)
-            .order_by(desc(PriceNormalized.snapshot_at))
-            .limit(1)
-        )
-        latest_price = (await db.execute(latest_price_stmt)).scalar_one_or_none()
+        # Query UK sell-market RAW price as the mark-to-market value
+        uk_market = (await db.execute(
+            select(Market).where(Market.region == "UK", Market.is_active == True).limit(1)
+        )).scalar_one_or_none()
+
+        latest_price = None
+        if uk_market:
+            latest_price = (await db.execute(
+                select(PriceNormalized)
+                .where(
+                    PriceNormalized.card_id == data.card_id,
+                    PriceNormalized.market_id == uk_market.id,
+                    PriceNormalized.condition_normalized == "RAW",
+                )
+                .order_by(desc(PriceNormalized.snapshot_at))
+                .limit(1)
+            )).scalar_one_or_none()
+
         initial_val = latest_price.price_gbp if latest_price else data.buy_price_gbp
 
         holding = Portfolio(
@@ -56,30 +67,42 @@ class PortfolioService:
             .where(Portfolio.user_id == user_id)
         )
         rows = (await db.execute(stmt)).all()
+
+        # Fetch UK sell market for fee/shipping constants
+        uk_market = (await db.execute(
+            select(Market).where(Market.region == "UK", Market.is_active == True).limit(1)
+        )).scalar_one_or_none()
+        uk_fee_pct = uk_market.fee_percent if uk_market else 12.9
+        uk_shipping = uk_market.shipping_estimate_gbp if uk_market else 3.50
+
         result = []
         for holding, card, market in rows:
+            current_val = holding.current_value_gbp or holding.buy_price_gbp
+            entry = holding.buy_price_gbp
+            qty = holding.quantity
+
+            # Net P&L = gross spread minus eBay sell fees and shipping
+            platform_fees = current_val * (uk_fee_pct / 100)
+            net_per_unit = current_val - entry - platform_fees - uk_shipping
+            net_pnl = round(net_per_unit * qty, 2)
+            net_roi = round((net_per_unit / entry * 100) if entry else 0, 2)
+
             d = {
                 "id": holding.id,
                 "user_id": holding.user_id,
                 "card_id": holding.card_id,
                 "market_id": holding.market_id,
-                "quantity": holding.quantity,
-                "buy_price_gbp": holding.buy_price_gbp,
+                "quantity": qty,
+                "buy_price_gbp": entry,
                 "buy_date": holding.buy_date,
-                "current_value_gbp": holding.current_value_gbp,
+                "current_value_gbp": round(current_val, 2),
                 "condition": holding.condition,
                 "notes": holding.notes,
                 "created_at": holding.created_at,
                 "card_name": card.name,
                 "card_image_url": card.image_url,
-                "unrealized_pnl_gbp": round(
-                    ((holding.current_value_gbp or holding.buy_price_gbp) - holding.buy_price_gbp)
-                    * holding.quantity, 2
-                ),
-                "unrealized_pnl_percent": round(
-                    (((holding.current_value_gbp or holding.buy_price_gbp) - holding.buy_price_gbp)
-                     / holding.buy_price_gbp * 100) if holding.buy_price_gbp else 0, 2
-                ),
+                "unrealized_pnl_gbp": net_pnl,
+                "unrealized_pnl_percent": net_roi,
                 "market": market.name,
             }
             result.append(d)
@@ -157,12 +180,22 @@ class PortfolioService:
         card_ids = [h["card_id"] for h in holdings]
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
+        from src.domains.markets.models import Market
+        uk_market = (await db.execute(
+            select(Market).where(Market.region == "UK", Market.is_active == True).limit(1)
+        )).scalar_one_or_none()
+
+        price_filter = [
+            PriceNormalized.card_id.in_(card_ids),
+            PriceNormalized.snapshot_at >= cutoff,
+            PriceNormalized.condition_normalized == "RAW",
+        ]
+        if uk_market:
+            price_filter.append(PriceNormalized.market_id == uk_market.id)
+
         result = await db.execute(
             select(PriceNormalized)
-            .where(
-                PriceNormalized.card_id.in_(card_ids),
-                PriceNormalized.snapshot_at >= cutoff,
-            )
+            .where(*price_filter)
             .order_by(PriceNormalized.snapshot_at)
         )
         prices = result.scalars().all()
@@ -188,15 +221,24 @@ class PortfolioService:
         return history
 
     async def update_valuations(self, db: AsyncSession) -> int:
-        """Update current_value_gbp for all holdings using latest normalized prices."""
+        """Update current_value_gbp for all holdings using latest UK RAW normalized prices."""
         from src.domains.pricing.models import PriceNormalized
+        from src.domains.markets.models import Market
         from sqlalchemy import desc
+
+        uk_market = (await db.execute(
+            select(Market).where(Market.region == "UK", Market.is_active == True).limit(1)
+        )).scalar_one_or_none()
+
         holdings_result = await db.execute(select(Portfolio))
         count = 0
         for holding in holdings_result.scalars().all():
+            filters = [PriceNormalized.card_id == holding.card_id,
+                       PriceNormalized.condition_normalized == "RAW"]
+            if uk_market:
+                filters.append(PriceNormalized.market_id == uk_market.id)
             latest = await db.execute(
-                select(PriceNormalized)
-                .where(PriceNormalized.card_id == holding.card_id)
+                select(PriceNormalized).where(*filters)
                 .order_by(desc(PriceNormalized.snapshot_at))
                 .limit(1)
             )

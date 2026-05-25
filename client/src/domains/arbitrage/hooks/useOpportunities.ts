@@ -23,6 +23,14 @@ export function useOpportunity(id: string) {
   })
 }
 
+export function useOpportunityByCard(cardId: string) {
+  return useQuery({
+    queryKey: ['opportunity-by-card', cardId],
+    queryFn: () => arbitrageApi.getOpportunityByCard(cardId),
+    enabled: !!cardId,
+  })
+}
+
 export function useRecalculate() {
   const qc = useQueryClient()
   return useMutation({

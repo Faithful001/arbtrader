@@ -21,6 +21,11 @@ async def get_price_history(
     return await pricing_service.get_price_history(db, card_id, market_id, limit)
 
 
+@router.get("/variations/{card_id}")
+async def get_card_variations(card_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    return await pricing_service.get_dynamic_variations(db, card_id)
+
+
 @router.get("/listings", response_model=List[ListingResponse])
 async def get_recent_listings(limit: int = Query(50, ge=1, le=200), db: AsyncSession = Depends(get_db)):
     return await pricing_service.get_recent_listings(db, limit)

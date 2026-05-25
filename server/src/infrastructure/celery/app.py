@@ -34,6 +34,7 @@ app.conf.update(
     worker_heartbeat=None,      # disables heartbeat (saves 1 connection)
     broker_pool_limit=1,        # limit broker connection pool to 1
     redis_max_connections=3,    # hard cap on Redis connections
+    beat_scheduler="celery.beat:PersistentScheduler",
 )
 
 # Import beat schedule after app is configured
