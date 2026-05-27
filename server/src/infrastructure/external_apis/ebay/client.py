@@ -40,6 +40,7 @@ MOCK_CARDS = [
 
 _cached_token: Optional[str] = None
 _token_expires_at: Optional[datetime] = None
+_last_token_attempt_failed_at: Optional[datetime] = None
 
 
 class EbayClient:
@@ -56,7 +57,11 @@ class EbayClient:
 
     async def _get_app_token(self) -> Optional[str]:
         """Fetch or retrieve a cached eBay OAuth application access token."""
-        global _cached_token, _token_expires_at
+        global _cached_token, _token_expires_at, _last_token_attempt_failed_at
+
+        # If a previous attempt failed in the last 5 minutes, throttle to avoid blocking timeouts
+        if _last_token_attempt_failed_at and datetime.now(timezone.utc) < _last_token_attempt_failed_at + timedelta(minutes=5):
+            return None
 
         if _cached_token and _token_expires_at and datetime.now(timezone.utc) < _token_expires_at:
             return _cached_token
@@ -96,10 +101,12 @@ class EbayClient:
                 _cached_token = token_data.get("access_token")
                 expires_in = token_data.get("expires_in", 7200)
                 _token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in - 300)
+                _last_token_attempt_failed_at = None
                 logger.info("eBay OAuth token refreshed")
                 return _cached_token
             except Exception as e:
                 logger.error("Failed to fetch eBay OAuth token", error=str(e))
+                _last_token_attempt_failed_at = datetime.now(timezone.utc)
                 return None
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
