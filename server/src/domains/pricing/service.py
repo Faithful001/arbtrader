@@ -37,58 +37,65 @@ class PricingService:
         ingested = 0
 
         for card in cards:
-            # Use a savepoint so a failure for one card cannot abort the
-            # outer transaction and block every subsequent card.
+            # 1. Fetch listings from eBay (slow network I/O) OUTSIDE of any transaction block
             try:
-                async with db.begin_nested():
-                    # Build precise query using set name and card number
-                    set_name = card.card_set.name if card.card_set else ""
-                    search_query = f"{card.name} {set_name} {card.number or ''}".strip()
-                    listings = await client.get_completed_listings(search_query, limit=15)
-                    now = datetime.now(timezone.utc)
-                    card_ingested = 0
-                    for listing in listings:
-                        if not self.is_genuine_listing_match(card, listing.get("title", "")):
-                            logger.info("Skipping non-genuine card match", title=listing.get("title"), card=card.name)
-                            continue
-                        if listing.get("external_id"):
-                            existing = await db.execute(
-                                select(PriceRaw).where(PriceRaw.external_id == listing["external_id"])
-                            )
-                            if existing.scalar_one_or_none():
-                                continue
-                        raw = PriceRaw(
-                            card_id=card.id,
-                            market_id=market.id,
-                            price=listing["price"],
-                            currency=listing["currency"],
-                            condition=listing.get("condition"),
-                            sold_at=datetime.fromisoformat(listing["sold_at"].replace("Z", "+00:00"))
-                            if listing.get("sold_at") else None,
-                            fetched_at=now,
-                            external_id=listing.get("external_id"),
-                            title=listing.get("title"),
-                            url=listing.get("url"),
-                        )
-                        db.add(raw)
-                        await db.flush()
-                        price_gbp = fx_converter.to_gbp(listing["price"], listing["currency"])
-                        fx_rate = fx_converter.get_rate(listing["currency"])
-                        norm = PriceNormalized(
-                            price_raw_id=raw.id,
-                            card_id=card.id,
-                            market_id=market.id,
-                            price_gbp=price_gbp,
-                            condition_normalized=self._normalize_condition(listing.get("condition", "")),
-                            fx_rate_used=fx_rate,
-                            snapshot_at=raw.sold_at or now,
-                        )
-                        db.add(norm)
-                        card_ingested += 1
-                    ingested += card_ingested
-                    logger.debug("Card ingested", card=card.name, records=card_ingested)
+                set_name = card.card_set.name if card.card_set else ""
+                search_query = f"{card.name} {set_name} {card.number or ''}".strip()
+                listings = await client.get_completed_listings(search_query, limit=15)
             except Exception as e:
-                logger.error("Ingestion failed for card — savepoint rolled back", card=card.name, error=str(e))
+                logger.error("Failed to fetch listings from eBay for card", card=card.name, error=str(e))
+                continue
+
+            # 2. Write to DB in a fast transaction and commit immediately per card
+            try:
+                now = datetime.now(timezone.utc)
+                card_ingested = 0
+                for listing in listings:
+                    if not self.is_genuine_listing_match(card, listing.get("title", "")):
+                        logger.info("Skipping non-genuine card match", title=listing.get("title"), card=card.name)
+                        continue
+                    if listing.get("external_id"):
+                        existing = await db.execute(
+                            select(PriceRaw).where(PriceRaw.external_id == listing["external_id"])
+                        )
+                        if existing.scalar_one_or_none():
+                            continue
+                    raw = PriceRaw(
+                        card_id=card.id,
+                        market_id=market.id,
+                        price=listing["price"],
+                        currency=listing["currency"],
+                        condition=listing.get("condition"),
+                        sold_at=datetime.fromisoformat(listing["sold_at"].replace("Z", "+00:00"))
+                        if listing.get("sold_at") else None,
+                        fetched_at=now,
+                        external_id=listing.get("external_id"),
+                        title=listing.get("title"),
+                        url=listing.get("url"),
+                    )
+                    db.add(raw)
+                    await db.flush()
+                    price_gbp = fx_converter.to_gbp(listing["price"], listing["currency"])
+                    fx_rate = fx_converter.get_rate(listing["currency"])
+                    norm = PriceNormalized(
+                        price_raw_id=raw.id,
+                        card_id=card.id,
+                        market_id=market.id,
+                        price_gbp=price_gbp,
+                        condition_normalized=self._normalize_condition(listing.get("condition", "")),
+                        fx_rate_used=fx_rate,
+                        snapshot_at=raw.sold_at or now,
+                    )
+                    db.add(norm)
+                    card_ingested += 1
+
+                if card_ingested > 0:
+                    await db.commit()
+                    ingested += card_ingested
+                    logger.info("Card ingested and committed successfully", card=card.name, records=card_ingested)
+            except Exception as e:
+                await db.rollback()
+                logger.error("Ingestion failed for card - rolled back", card=card.name, error=str(e))
 
         logger.info("Ingestion complete", region=region, records=ingested)
         return ingested

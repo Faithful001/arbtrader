@@ -34,10 +34,6 @@ class FXConverter:
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def refresh_rates(self) -> None:
         """Fetch latest FX rates from the API."""
-        if settings.USE_MOCK_DATA:
-            self._rates = FALLBACK_RATES.copy()
-            return
-
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(
@@ -53,7 +49,7 @@ class FXConverter:
                     self._rates["GBP"] = 1.0
                     logger.info("FX rates refreshed", count=len(self._rates))
         except Exception as e:
-            logger.warning("FX rate refresh failed, using fallback", error=str(e))
+            logger.warning("FX rate refresh failed, using fallback rates", error=str(e))
             self._rates = FALLBACK_RATES.copy()
 
     def to_gbp(self, amount: float, currency: str) -> float:

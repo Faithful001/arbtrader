@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.infrastructure.database.session import get_db
-from src.core.config import settings
 from src.domains.arbitrage.service import arbitrage_service
 from src.domains.arbitrage.schemas import OpportunityFeedResponse, OpportunityResponse, RecalcResponse
 
@@ -22,16 +21,6 @@ async def get_opportunity_feed(
     sort_by: str = Query("net_profit_gbp", regex="^(net_profit_gbp|roi_percent|confidence_score)$"),
     db: AsyncSession = Depends(get_db),
 ):
-    if settings.USE_MOCK_DATA:
-        mock = await arbitrage_service.get_mock_feed()
-        page_items = mock[skip: skip + limit]
-        return OpportunityFeedResponse(
-            items=page_items,
-            total=len(mock),
-            page=skip // limit + 1,
-            page_size=limit,
-        )
-
     items, total = await arbitrage_service.get_opportunities_feed(
         db,
         skip=skip,

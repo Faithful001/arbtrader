@@ -4,6 +4,7 @@ export interface Opportunity {
   card_name?: string;
   card_image_url?: string;
   card_rarity?: string;
+  card_number?: string;
   buy_market_id: string;
   sell_market_id: string;
   buy_market_name?: string;

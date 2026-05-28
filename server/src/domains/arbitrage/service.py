@@ -96,6 +96,7 @@ class ArbitrageService:
                 card_name=card.name if card else None,
                 card_image_url=card.image_url if card else None,
                 card_rarity=card.rarity if card else None,
+                card_number=card.number if card else None,
                 buy_market_id=opp.buy_market_id,
                 sell_market_id=opp.sell_market_id,
                 buy_market_name=buy_market.name if buy_market else None,
@@ -163,6 +164,7 @@ class ArbitrageService:
             card_name=card.name if card else None,
             card_image_url=card.image_url if card else None,
             card_rarity=card.rarity if card else None,
+            card_number=card.number if card else None,
             buy_market_id=opp.buy_market_id,
             sell_market_id=opp.sell_market_id,
             buy_market_name=buy_market.name if buy_market else None,
@@ -293,55 +295,6 @@ class ArbitrageService:
 
         logger.info("Arbitrage recalculation complete", opportunities=count)
         return count
-
-    async def get_mock_feed(self) -> List[dict]:
-        """Return mock opportunity data when DB is empty or mock mode is on."""
-        import random
-        cards = [
-            ("Giratina VSTAR", "https://images.pokemontcg.io/swsh12pt5/gg69_hires.png", "Secret Rare"),
-            ("Arceus VSTAR", "https://images.pokemontcg.io/swsh12pt5/gg70_hires.png", "Secret Rare"),
-            ("Origin Forme Dialga VSTAR", "https://images.pokemontcg.io/swsh12pt5/gg68_hires.png", "Secret Rare"),
-            ("Origin Forme Palkia VSTAR", "https://images.pokemontcg.io/swsh12pt5/gg67_hires.png", "Secret Rare"),
-            ("Mewtwo VSTAR", "https://images.pokemontcg.io/swsh12pt5/gg44_hires.png", "Ultra Rare"),
-            ("Suicune V", "https://images.pokemontcg.io/swsh12pt5/gg38_hires.png", "Ultra Rare"),
-            ("Pikachu", "https://images.pokemontcg.io/swsh12pt5/160_hires.png", "Secret Rare"),
-            ("Charizard VSTAR", "https://images.pokemontcg.io/swsh12pt5/19_hires.png", "Ultra Rare"),
-        ]
-        results = []
-        for i, (name, img, rarity) in enumerate(cards):
-            buy = round(random.uniform(40, 120), 2)
-            sell = round(buy * random.uniform(1.15, 1.60), 2)
-            gross = round(sell - buy, 2)
-            fees = round(sell * 0.129, 2)
-            ship = round(random.uniform(3.5, 15.0), 2)
-            net = round(gross - fees - ship, 2)
-            roi = round((net / buy) * 100, 1)
-            conf = round(random.uniform(0.62, 0.97), 2)
-            results.append({
-                "id": str(uuid.uuid4()),
-                "card_id": str(uuid.uuid4()),
-                "card_name": name,
-                "card_image_url": img,
-                "card_rarity": rarity,
-                "buy_market_name": "eBay US",
-                "sell_market_name": "eBay UK",
-                "buy_price_gbp": buy,
-                "sell_price_gbp": sell,
-                "gross_spread_gbp": gross,
-                "platform_fees_gbp": fees,
-                "shipping_cost_gbp": ship,
-                "import_duties_gbp": 0.0,
-                "net_profit_gbp": max(net, 5.0),
-                "roi_percent": max(roi, 8.0),
-                "confidence_score": conf,
-                "volume_score": round(random.uniform(0.3, 1.0), 2),
-                "data_points_used": random.randint(4, 18),
-                "status": "active",
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "expires_at": None,
-            })
-        results.sort(key=lambda x: x["net_profit_gbp"], reverse=True)
-        return results
 
 
 arbitrage_service = ArbitrageService()

@@ -204,9 +204,11 @@ export default function OpportunityFeed() {
                 <th>RARITY</th>
                 <th className="right">US ASK (EST)</th>
                 <th className="right">UK BID (EST)</th>
-                <th className="right">CONF. SCORE</th>
-                <th className="right">NET SPREAD</th>
+                <th className="right">GROSS SPREAD</th>
+                <th className="right">FEES & SHIP</th>
+                <th className="right">NET PROFIT</th>
                 <th className="right">ROI</th>
+                <th className="right">CONF. SCORE</th>
                 <th className="right" style={{ textAlign: "center" }}>
                   ACTIONS
                 </th>
@@ -245,8 +247,8 @@ export default function OpportunityFeed() {
                       </a>
                       <div>
                         <div style={{ fontWeight: 500 }}>{opp.card_name}</div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                          {opp.card_id.slice(0, 8)}...
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                          #{opp.card_number || "N/A"}
                         </div>
                       </div>
                     </div>
@@ -256,6 +258,14 @@ export default function OpportunityFeed() {
                   </td>
                   <td className="right numeric text-muted">£{opp.buy_price_gbp.toFixed(2)}</td>
                   <td className="right numeric text-muted">£{opp.sell_price_gbp.toFixed(2)}</td>
+                  <td className="right numeric text-muted">£{opp.gross_spread_gbp.toFixed(2)}</td>
+                  <td className="right numeric text-muted">
+                    £{(opp.platform_fees_gbp + opp.shipping_cost_gbp + opp.import_duties_gbp).toFixed(2)}
+                  </td>
+                  <td className="right numeric text-profit text-bright">
+                    +£{opp.net_profit_gbp.toFixed(2)}
+                  </td>
+                  <td className="right numeric text-profit">{opp.roi_percent.toFixed(1)}%</td>
                   <td className="right numeric">
                     <span
                       style={{
@@ -265,10 +275,6 @@ export default function OpportunityFeed() {
                       {(opp.confidence_score * 100).toFixed(0)}%
                     </span>
                   </td>
-                  <td className="right numeric text-profit text-bright">
-                    +£{opp.net_profit_gbp.toFixed(2)}
-                  </td>
-                  <td className="right numeric text-profit">{opp.roi_percent.toFixed(1)}%</td>
                   <td
                     className="right"
                     style={{ display: "flex", gap: 8, justifyContent: "center" }}

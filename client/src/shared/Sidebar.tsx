@@ -14,7 +14,7 @@ import { useAuth } from "../domains/auth/context/AuthContext";
 
 const navItems = [
   { to: "/", label: "Live Spreads", icon: TrendingUp },
-  { to: "/markets", label: "Listings", icon: Store },
+  { to: "/markets", label: "Set Explorer", icon: LayoutGrid },
   { to: "/alerts", label: "Condition Triggers", icon: Bell },
   { to: "/portfolio", label: "Position Book", icon: Briefcase },
 ];
